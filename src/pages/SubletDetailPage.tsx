@@ -4,8 +4,9 @@ import { useApp } from "@/contexts/AppContext";
 import SubletCard from "@/components/SubletCard";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Wifi, DumbBell, Shield } from "lucide-react";
 import { useEffect } from "react";
+import { Badge } from "@/components/ui/badge";
 
 const SubletDetailPage = () => {
   const { subletId } = useParams<{ subletId: string }>();
@@ -31,6 +32,22 @@ const SubletDetailPage = () => {
     );
   }
 
+  // Demo amenities if none exist on the sublet
+  const amenities = sublet.amenities || ["High-speed WiFi", "Gym access", "24/7 security"];
+
+  // Map amenities to corresponding icons
+  const getAmenityIcon = (amenity: string) => {
+    const lowerAmenity = amenity.toLowerCase();
+    if (lowerAmenity.includes('wifi') || lowerAmenity.includes('internet')) {
+      return <Wifi className="h-4 w-4 mr-2" />;
+    } else if (lowerAmenity.includes('gym') || lowerAmenity.includes('fitness')) {
+      return <DumbBell className="h-4 w-4 mr-2" />;
+    } else if (lowerAmenity.includes('security') || lowerAmenity.includes('safe')) {
+      return <Shield className="h-4 w-4 mr-2" />;
+    }
+    return null;
+  };
+
   return (
     <div className="pb-20 max-w-2xl mx-auto">
       <header className="bg-neu-red text-white p-4 flex items-center">
@@ -49,12 +66,32 @@ const SubletDetailPage = () => {
         <SubletCard sublet={sublet} expanded={true} />
         
         <div className="mt-6 bg-white rounded-lg shadow p-4">
+          <h2 className="text-lg font-bold mb-3">Amenities</h2>
+          <div className="grid grid-cols-2 gap-2">
+            {amenities.map((amenity, index) => (
+              <Badge 
+                key={index} 
+                variant="outline" 
+                className="flex items-center justify-start px-3 py-2 bg-gray-50"
+              >
+                {getAmenityIcon(amenity)}
+                <span>{amenity}</span>
+              </Badge>
+            ))}
+          </div>
+        </div>
+        
+        <div className="mt-6 bg-white rounded-lg shadow p-4">
           <h2 className="text-lg font-bold mb-2">Location Details</h2>
-          <p className="text-gray-700">
+          <p className="text-gray-700 mb-3">
             {sublet.location}, {sublet.distanceFromNEU} miles from Northeastern University
           </p>
-          <div className="mt-4 h-48 bg-gray-200 rounded flex items-center justify-center">
-            <p className="text-gray-500">Map would appear here with Google Maps API</p>
+          <div className="mt-4 h-64 bg-gray-200 rounded overflow-hidden">
+            <img 
+              src="/lovable-uploads/00e76d61-7cdc-40b9-8203-95d37c2a1f06.png" 
+              alt="Map showing location near Northeastern University" 
+              className="w-full h-full object-cover"
+            />
           </div>
         </div>
       </div>

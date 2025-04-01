@@ -19,6 +19,7 @@ export interface Sublet {
   createdAt: string;
   genderPreference: "male" | "female" | "any";
   pricingType: "firm" | "negotiable";
+  amenities?: string[]; // Added amenities as an optional array of strings
 }
 
 export interface Message {

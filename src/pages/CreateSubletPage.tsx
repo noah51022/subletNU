@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
-import { ArrowLeft, CalendarIcon, ImagePlus } from "lucide-react";
+import { ArrowLeft, CalendarIcon, ImagePlus, Plus, X } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import BottomNav from "@/components/BottomNav";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -36,6 +37,8 @@ const CreateSubletPage = () => {
   const [photos, setPhotos] = useState<string[]>([]);
   const [genderPreference, setGenderPreference] = useState<"male" | "female" | "any">("any");
   const [pricingType, setPricingType] = useState<"firm" | "negotiable">("firm");
+  const [amenities, setAmenities] = useState<string[]>([]);
+  const [newAmenity, setNewAmenity] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   useEffect(() => {
@@ -78,6 +81,7 @@ const CreateSubletPage = () => {
         photos,
         genderPreference,
         pricingType,
+        amenities,
       });
       
       toast({
@@ -116,6 +120,28 @@ const CreateSubletPage = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleAddAmenity = () => {
+    if (newAmenity.trim() === "") return;
+    
+    if (amenities.includes(newAmenity.trim())) {
+      toast({
+        title: "Duplicate Amenity",
+        description: "This amenity is already added.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setAmenities([...amenities, newAmenity.trim()]);
+    setNewAmenity("");
+  };
+
+  const handleRemoveAmenity = (index: number) => {
+    const updatedAmenities = [...amenities];
+    updatedAmenities.splice(index, 1);
+    setAmenities(updatedAmenities);
   };
 
   if (!currentUser) return null;
@@ -238,6 +264,48 @@ const CreateSubletPage = () => {
                 <SelectItem value="negotiable">Negotiable Price</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              Amenities
+            </label>
+            <div className="flex space-x-2">
+              <Input
+                placeholder="e.g., High-speed WiFi, Gym access"
+                value={newAmenity}
+                onChange={(e) => setNewAmenity(e.target.value)}
+              />
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="icon"
+                onClick={handleAddAmenity}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {amenities.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {amenities.map((amenity, index) => (
+                  <Badge 
+                    key={index} 
+                    variant="secondary"
+                    className="flex items-center"
+                  >
+                    {amenity}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAmenity(index)}
+                      className="ml-1 rounded-full hover:bg-gray-200 p-1"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
           
           <div className="grid grid-cols-2 gap-4">
