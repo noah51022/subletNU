@@ -35,6 +35,7 @@ const CreateSubletPage = () => {
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [photos, setPhotos] = useState<string[]>([]);
   const [genderPreference, setGenderPreference] = useState<"male" | "female" | "any">("any");
+  const [pricingType, setPricingType] = useState<"firm" | "negotiable">("firm");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   useEffect(() => {
@@ -76,6 +77,7 @@ const CreateSubletPage = () => {
         endDate: endDate.toISOString(),
         photos,
         genderPreference,
+        pricingType,
       });
       
       toast({
@@ -216,6 +218,24 @@ const CreateSubletPage = () => {
                 <SelectItem value="any">Open to All</SelectItem>
                 <SelectItem value="male">For Guys</SelectItem>
                 <SelectItem value="female">For Girls</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="pricingType" className="text-sm font-medium">
+              Pricing Type
+            </label>
+            <Select 
+              value={pricingType} 
+              onValueChange={(value) => setPricingType(value as "firm" | "negotiable")}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select pricing type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="firm">Firm Price</SelectItem>
+                <SelectItem value="negotiable">Negotiable Price</SelectItem>
               </SelectContent>
             </Select>
           </div>
