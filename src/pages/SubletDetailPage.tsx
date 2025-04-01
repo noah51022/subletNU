@@ -1,10 +1,9 @@
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
 import SubletCard from "@/components/SubletCard";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Wifi, DumbBell, Shield } from "lucide-react";
+import { ArrowLeft, Wifi, Dumbbell, Shield } from "lucide-react";
 import { useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 
@@ -41,7 +40,7 @@ const SubletDetailPage = () => {
     if (lowerAmenity.includes('wifi') || lowerAmenity.includes('internet')) {
       return <Wifi className="h-4 w-4 mr-2" />;
     } else if (lowerAmenity.includes('gym') || lowerAmenity.includes('fitness')) {
-      return <DumbBell className="h-4 w-4 mr-2" />;
+      return <Dumbbell className="h-4 w-4 mr-2" />;
     } else if (lowerAmenity.includes('security') || lowerAmenity.includes('safe')) {
       return <Shield className="h-4 w-4 mr-2" />;
     }
