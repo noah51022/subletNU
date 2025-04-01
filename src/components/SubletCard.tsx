@@ -77,6 +77,17 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
     );
   };
 
+  const getPricingBadge = () => {
+    return (
+      <Badge 
+        variant="outline" 
+        className={`${sublet.pricingType === 'negotiable' ? 'bg-green-100 hover:bg-green-100' : 'bg-gray-100 hover:bg-gray-100'} border-none text-gray-700 font-medium ml-1`}
+      >
+        {sublet.pricingType === 'negotiable' ? 'Negotiable' : 'Firm'}
+      </Badge>
+    );
+  };
+
   return (
     <Card 
       className={`sublet-card ${expanded ? 'w-full' : ''} cursor-pointer`}
@@ -122,6 +133,7 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
                 ${sublet.price}/mo
               </div>
               {getGenderBadge()}
+              {getPricingBadge()}
             </div>
             <div className="text-sm text-gray-600">
               {sublet.distanceFromNEU} mi from NEU • {formatDateRange()}

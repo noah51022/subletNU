@@ -38,6 +38,7 @@ export const mockSublets: Sublet[] = [
     ],
     createdAt: "2023-03-15T12:00:00Z",
     genderPreference: "female",
+    pricingType: "firm"
   },
   {
     id: "sublet2",
@@ -55,6 +56,7 @@ export const mockSublets: Sublet[] = [
     ],
     createdAt: "2023-03-18T14:30:00Z",
     genderPreference: "male",
+    pricingType: "negotiable"
   },
   {
     id: "sublet3",
@@ -72,6 +74,7 @@ export const mockSublets: Sublet[] = [
     ],
     createdAt: "2023-03-20T09:45:00Z",
     genderPreference: "any",
+    pricingType: "firm"
   },
 ];
 

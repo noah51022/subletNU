@@ -18,6 +18,7 @@ export interface Sublet {
   photos: string[];
   createdAt: string;
   genderPreference: "male" | "female" | "any";
+  pricingType: "firm" | "negotiable";
 }
 
 export interface Message {

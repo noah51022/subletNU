@@ -12,9 +12,28 @@ import {
 } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { useApp } from "@/contexts/AppContext";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const FilterBar = () => {
-  const { maxPrice, setMaxPrice, maxDistance, setMaxDistance, dateRange, setDateRange } = useApp();
+  const { 
+    maxPrice, 
+    setMaxPrice, 
+    maxDistance, 
+    setMaxDistance, 
+    dateRange, 
+    setDateRange,
+    genderFilter,
+    setGenderFilter,
+    pricingTypeFilter,
+    setPricingTypeFilter
+  } = useApp();
   const [isExpanded, setIsExpanded] = useState(false);
   const [startDate, setStartDate] = useState<Date | undefined>(dateRange.start ? new Date(dateRange.start) : undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(dateRange.end ? new Date(dateRange.end) : undefined);
@@ -53,6 +72,8 @@ const FilterBar = () => {
     setStartDate(undefined);
     setEndDate(undefined);
     setDateRange({ start: null, end: null });
+    setGenderFilter("all");
+    setPricingTypeFilter("all");
   };
 
   return (
@@ -92,6 +113,47 @@ const FilterBar = () => {
               onValueChange={handleMaxDistanceChange}
               className="mt-2"
             />
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label className="text-sm font-medium">Gender Preference</label>
+              <Select 
+                value={genderFilter} 
+                onValueChange={(value) => setGenderFilter(value as "male" | "female" | "any" | "all")}
+              >
+                <SelectTrigger className="w-full mt-1">
+                  <SelectValue placeholder="All preferences" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="all">All preferences</SelectItem>
+                    <SelectItem value="male">For guys</SelectItem>
+                    <SelectItem value="female">For girls</SelectItem>
+                    <SelectItem value="any">Open to all</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium">Pricing Type</label>
+              <Select 
+                value={pricingTypeFilter} 
+                onValueChange={(value) => setPricingTypeFilter(value as "firm" | "negotiable" | "all")}
+              >
+                <SelectTrigger className="w-full mt-1">
+                  <SelectValue placeholder="All pricing types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value="all">All pricing types</SelectItem>
+                    <SelectItem value="firm">Firm price</SelectItem>
+                    <SelectItem value="negotiable">Negotiable price</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           
           <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">

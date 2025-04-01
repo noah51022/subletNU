@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, ReactNode } from "react";
 import { Sublet, User, Message } from "../types";
 import { mockSublets, mockUsers, mockMessages } from "../services/mockData";
@@ -11,9 +10,13 @@ type AppContextType = {
   maxPrice: number;
   maxDistance: number;
   dateRange: { start: string | null; end: string | null };
+  genderFilter: "male" | "female" | "any" | "all";
+  pricingTypeFilter: "firm" | "negotiable" | "all";
   setMaxPrice: (price: number) => void;
   setMaxDistance: (distance: number) => void;
   setDateRange: (range: { start: string | null; end: string | null }) => void;
+  setGenderFilter: (gender: "male" | "female" | "any" | "all") => void;
+  setPricingTypeFilter: (type: "firm" | "negotiable" | "all") => void;
   login: (email: string, password: string) => Promise<boolean>;
   register: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
@@ -36,6 +39,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     start: null,
     end: null,
   });
+  const [genderFilter, setGenderFilter] = useState<"male" | "female" | "any" | "all">("all");
+  const [pricingTypeFilter, setPricingTypeFilter] = useState<"firm" | "negotiable" | "all">("all");
 
   // Computed filtered sublets
   const filteredSublets = sublets.filter((sublet) => {
@@ -54,7 +59,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       );
     }
     
-    return priceFilter && distanceFilter && dateFilter;
+    const genderFilterMatch = genderFilter === "all" || sublet.genderPreference === genderFilter;
+    const pricingTypeFilterMatch = pricingTypeFilter === "all" || sublet.pricingType === pricingTypeFilter;
+    
+    return priceFilter && distanceFilter && dateFilter && genderFilterMatch && pricingTypeFilterMatch;
   });
 
   // Auth functions (mock for now)
@@ -142,9 +150,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     maxPrice,
     maxDistance,
     dateRange,
+    genderFilter,
+    pricingTypeFilter,
     setMaxPrice,
     setMaxDistance,
     setDateRange,
+    setGenderFilter,
+    setPricingTypeFilter,
     login,
     register,
     logout,
