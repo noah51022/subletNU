@@ -1,0 +1,120 @@
+
+import { useState } from "react";
+import { Sublet } from "../types";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
+import { format } from "date-fns";
+import { useNavigate } from "react-router-dom";
+
+interface SubletCardProps {
+  sublet: Sublet;
+  expanded?: boolean;
+}
+
+const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const navigate = useNavigate();
+  
+  const handleNextPhoto = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (currentPhotoIndex < sublet.photos.length - 1) {
+      setCurrentPhotoIndex(currentPhotoIndex + 1);
+    }
+  };
+
+  const handlePrevPhoto = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (currentPhotoIndex > 0) {
+      setCurrentPhotoIndex(currentPhotoIndex - 1);
+    }
+  };
+
+  const handleCardClick = () => {
+    if (!expanded) {
+      navigate(`/sublet/${sublet.id}`);
+    }
+  };
+
+  const handleMessageClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/messages/${sublet.userId}`);
+  };
+
+  const formatDateRange = () => {
+    const start = new Date(sublet.startDate);
+    const end = new Date(sublet.endDate);
+    return `${format(start, "MMM d")} - ${format(end, "MMM d")}`;
+  };
+
+  return (
+    <Card 
+      className={`sublet-card ${expanded ? 'w-full' : ''} cursor-pointer`}
+      onClick={handleCardClick}
+    >
+      <div className="photo-carousel">
+        <img 
+          src={sublet.photos[currentPhotoIndex]}
+          alt={`Sublet at ${sublet.location}`} 
+          className="carousel-image"
+        />
+        
+        {sublet.photos.length > 1 && (
+          <>
+            <button 
+              onClick={handlePrevPhoto}
+              disabled={currentPhotoIndex === 0}
+              className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full p-1"
+              aria-label="Previous photo"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <button 
+              onClick={handleNextPhoto}
+              disabled={currentPhotoIndex === sublet.photos.length - 1}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full p-1"
+              aria-label="Next photo"
+            >
+              <ChevronRight size={20} />
+            </button>
+            <div className="absolute bottom-2 right-2 bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded-full">
+              {currentPhotoIndex + 1}/{sublet.photos.length}
+            </div>
+          </>
+        )}
+      </div>
+      
+      <div className="p-4">
+        <div className="flex justify-between items-start">
+          <div>
+            <div className="text-xl font-bold text-neu-red">
+              ${sublet.price}/mo
+            </div>
+            <div className="text-sm text-gray-600">
+              {sublet.distanceFromNEU} mi from NEU • {formatDateRange()}
+            </div>
+            <p className="mt-1 text-gray-800">{sublet.description}</p>
+          </div>
+        </div>
+        
+        <div className="mt-3 flex justify-between items-center">
+          <div className="text-xs text-gray-500">
+            Posted by: {sublet.userEmail}
+          </div>
+          
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="text-neu-red border-neu-red hover:bg-neu-red hover:text-white"
+            onClick={handleMessageClick}
+          >
+            <MessageSquare size={16} className="mr-1" />
+            Message
+          </Button>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+export default SubletCard;
