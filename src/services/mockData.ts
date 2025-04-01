@@ -37,6 +37,7 @@ export const mockSublets: Sublet[] = [
       "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
     ],
     createdAt: "2023-03-15T12:00:00Z",
+    genderPreference: "female",
   },
   {
     id: "sublet2",
@@ -53,6 +54,7 @@ export const mockSublets: Sublet[] = [
       "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
     ],
     createdAt: "2023-03-18T14:30:00Z",
+    genderPreference: "male",
   },
   {
     id: "sublet3",
@@ -69,6 +71,7 @@ export const mockSublets: Sublet[] = [
       "https://images.unsplash.com/photo-1721322800607-8c38375eef04?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
     ],
     createdAt: "2023-03-20T09:45:00Z",
+    genderPreference: "any",
   },
 ];
 
