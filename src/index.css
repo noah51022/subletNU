@@ -75,3 +75,16 @@
 .filters-bar {
   @apply sticky top-0 z-40 bg-white px-4 py-2 shadow-sm;
 }
+
+/* Gender preference colors */
+.bg-soft-pink {
+  background-color: #FFDEE2;
+}
+
+.bg-soft-blue {
+  background-color: #D3E4FD;
+}
+
+.bg-light-purple {
+  background-color: #D6BCFA;
+}

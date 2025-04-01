@@ -12,6 +12,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import BottomNav from "@/components/BottomNav";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -27,6 +34,7 @@ const CreateSubletPage = () => {
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [photos, setPhotos] = useState<string[]>([]);
+  const [genderPreference, setGenderPreference] = useState<"male" | "female" | "any">("any");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   useEffect(() => {
@@ -67,6 +75,7 @@ const CreateSubletPage = () => {
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
         photos,
+        genderPreference,
       });
       
       toast({
@@ -190,6 +199,25 @@ const CreateSubletPage = () => {
               onChange={(e) => setDistanceFromNEU(e.target.value)}
               required
             />
+          </div>
+          
+          <div className="space-y-2">
+            <label htmlFor="genderPreference" className="text-sm font-medium">
+              Gender Preference
+            </label>
+            <Select 
+              value={genderPreference} 
+              onValueChange={(value) => setGenderPreference(value as "male" | "female" | "any")}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select gender preference" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="any">Open to All</SelectItem>
+                <SelectItem value="male">For Guys</SelectItem>
+                <SelectItem value="female">For Girls</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           
           <div className="grid grid-cols-2 gap-4">

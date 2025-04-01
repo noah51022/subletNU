@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
 
 interface SubletCardProps {
   sublet: Sublet;
@@ -45,6 +46,35 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
     const start = new Date(sublet.startDate);
     const end = new Date(sublet.endDate);
     return `${format(start, "MMM d")} - ${format(end, "MMM d")}`;
+  };
+
+  const getGenderBadge = () => {
+    const genderInfo = {
+      male: {
+        label: "For guys",
+        className: "bg-soft-blue hover:bg-soft-blue"
+      },
+      female: {
+        label: "For girls",
+        className: "bg-soft-pink hover:bg-soft-pink"
+      },
+      any: {
+        label: "Open to all",
+        className: "bg-light-purple hover:bg-light-purple"
+      }
+    };
+
+    const preference = sublet.genderPreference || "any";
+    const info = genderInfo[preference];
+
+    return (
+      <Badge 
+        variant="outline" 
+        className={`${info.className} border-none text-gray-700 font-medium`}
+      >
+        {info.label}
+      </Badge>
+    );
   };
 
   return (
@@ -87,8 +117,11 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
       <div className="p-4">
         <div className="flex justify-between items-start">
           <div>
-            <div className="text-xl font-bold text-neu-red">
-              ${sublet.price}/mo
+            <div className="flex items-center space-x-2 mb-1">
+              <div className="text-xl font-bold text-neu-red">
+                ${sublet.price}/mo
+              </div>
+              {getGenderBadge()}
             </div>
             <div className="text-sm text-gray-600">
               {sublet.distanceFromNEU} mi from NEU • {formatDateRange()}

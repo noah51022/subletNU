@@ -17,6 +17,7 @@ export interface Sublet {
   description: string;
   photos: string[];
   createdAt: string;
+  genderPreference: "male" | "female" | "any";
 }
 
 export interface Message {
