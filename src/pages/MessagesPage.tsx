@@ -1,6 +1,5 @@
-
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
@@ -12,11 +11,13 @@ const MessagesPage = () => {
   const { userId } = useParams<{ userId?: string }>();
   const { currentUser, sublets, messages, sendMessage, getMessagesForUser } = useApp();
   const navigate = useNavigate();
+  const location = useLocation();
   
   const [newMessage, setNewMessage] = useState("");
   const [activeUser, setActiveUser] = useState<string | null>(userId || null);
   
-  // Get all unique users the current user has exchanged messages with
+  const subletId = location.state?.subletId;
+  
   const getUniqueContacts = () => {
     if (!currentUser) return [];
     
@@ -43,7 +44,6 @@ const MessagesPage = () => {
   const activeUserEmail = mockUsers.find(u => u.id === activeUser)?.email || "Unknown User";
   const activeUserMessages = activeUser ? getMessagesForUser(activeUser) : [];
   
-  // Find a sublet posted by the active user
   const activeUserSublet = activeUser 
     ? sublets.find(s => s.userId === activeUser) 
     : null;
@@ -63,9 +63,16 @@ const MessagesPage = () => {
     setNewMessage("");
   };
 
+  const handleBackClick = () => {
+    if (subletId) {
+      navigate(`/sublet/${subletId}`);
+    } else {
+      navigate('/messages');
+    }
+  };
+
   if (!currentUser) return null;
 
-  // If viewing messages but no active conversation
   if (!activeUser && !userId) {
     return (
       <div className="pb-20 max-w-2xl mx-auto">
@@ -114,7 +121,7 @@ const MessagesPage = () => {
           variant="ghost" 
           size="icon" 
           className="text-white hover:bg-neu-red/80" 
-          onClick={() => navigate('/messages')}
+          onClick={handleBackClick}
         >
           <ArrowLeft />
         </Button>

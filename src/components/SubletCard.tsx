@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Sublet } from "../types";
 import { Card } from "@/components/ui/card";
@@ -39,7 +38,7 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
 
   const handleMessageClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigate(`/messages/${sublet.userId}`);
+    navigate(`/messages/${sublet.userId}`, { state: { subletId: sublet.id } });
   };
 
   const formatDateRange = () => {
