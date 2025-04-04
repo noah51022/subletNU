@@ -12,6 +12,7 @@ import AuthPage from "./pages/AuthPage";
 import SubletDetailPage from "./pages/SubletDetailPage";
 import CreateSubletPage from "./pages/CreateSubletPage";
 import MessagesPage from "./pages/MessagesPage";
+import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 
 // Create a client
@@ -32,6 +33,7 @@ const App = () => {
               <Route path="/create" element={<CreateSubletPage />} />
               <Route path="/messages" element={<MessagesPage />} />
               <Route path="/messages/:userId" element={<MessagesPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </TooltipProvider>

@@ -1,5 +1,5 @@
 
-import { Home, PlusCircle, MessageSquare } from "lucide-react";
+import { Home, PlusCircle, MessageSquare, User } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const BottomNav = () => {
@@ -31,6 +31,14 @@ const BottomNav = () => {
       >
         <MessageSquare size={24} />
         <span className="text-xs mt-1">Messages</span>
+      </button>
+
+      <button 
+        className={`nav-item ${pathname === '/profile' ? 'active' : ''}`}
+        onClick={() => navigate('/profile')}
+      >
+        <User size={24} />
+        <span className="text-xs mt-1">Profile</span>
       </button>
     </div>
   );
