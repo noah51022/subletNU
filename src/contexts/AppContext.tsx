@@ -1,9 +1,14 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Sublet, User, Message } from "../types";
 import { mockSublets, mockUsers, mockMessages } from "../services/mockData";
+import { supabase } from "@/integrations/supabase/client";
+import { User as SupabaseUser, Session } from "@supabase/supabase-js";
+import { toast } from "@/hooks/use-toast";
 
 type AppContextType = {
   currentUser: User | null;
+  supabaseUser: SupabaseUser | null;
+  session: Session | null;
   sublets: Sublet[];
   messages: Message[];
   filteredSublets: Sublet[];
@@ -19,7 +24,7 @@ type AppContextType = {
   setPricingTypeFilter: (type: "firm" | "negotiable" | "all") => void;
   login: (email: string, password: string) => Promise<boolean>;
   register: (email: string, password: string) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   addSublet: (sublet: Omit<Sublet, "id" | "userId" | "userEmail" | "createdAt">) => void;
   sendMessage: (receiverId: string, text: string) => void;
   getMessagesForUser: (userId: string) => Message[];
@@ -29,6 +34,8 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [sublets, setSublets] = useState<Sublet[]>(mockSublets);
   const [messages, setMessages] = useState<Message[]>(mockMessages);
   
@@ -41,6 +48,47 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   });
   const [genderFilter, setGenderFilter] = useState<"male" | "female" | "any" | "all">("all");
   const [pricingTypeFilter, setPricingTypeFilter] = useState<"firm" | "negotiable" | "all">("all");
+
+  // Setup Supabase auth listener
+  useEffect(() => {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setSupabaseUser(session?.user ?? null);
+        
+        // Update our app's user state
+        if (session?.user) {
+          const appUser: User = {
+            id: session.user.id,
+            email: session.user.email || "",
+            verified: session.user.email_confirmed_at !== null
+          };
+          setCurrentUser(appUser);
+        } else {
+          setCurrentUser(null);
+        }
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setSupabaseUser(session?.user ?? null);
+      
+      // Update our app's user state
+      if (session?.user) {
+        const appUser: User = {
+          id: session.user.id,
+          email: session.user.email || "",
+          verified: session.user.email_confirmed_at !== null
+        };
+        setCurrentUser(appUser);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Computed filtered sublets
   const filteredSublets = sublets.filter((sublet) => {
@@ -65,39 +113,101 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return priceFilter && distanceFilter && dateFilter && genderFilterMatch && pricingTypeFilterMatch;
   });
 
-  // Auth functions (mock for now)
+  // Auth functions (using Supabase)
   const login = async (email: string, password: string): Promise<boolean> => {
     if (!email.endsWith('@northeastern.edu')) {
+      toast({
+        title: "Invalid Email",
+        description: "You must use a northeastern.edu email address.",
+        variant: "destructive",
+      });
       return false;
     }
     
-    const user = mockUsers.find(u => u.email === email);
-    if (user) {
-      setCurrentUser(user);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) {
+        toast({
+          title: "Login Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        return false;
+      }
+      
+      toast({
+        title: "Login Successful",
+        description: "Welcome back to SubletNU!",
+      });
       return true;
+    } catch (error: any) {
+      toast({
+        title: "Login Error",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+      return false;
     }
-    return false;
   };
 
   const register = async (email: string, password: string): Promise<boolean> => {
     if (!email.endsWith('@northeastern.edu')) {
+      toast({
+        title: "Invalid Email",
+        description: "You must use a northeastern.edu email address.",
+        variant: "destructive",
+      });
       return false;
     }
     
-    const newUser: User = {
-      id: `user${mockUsers.length + 1}`,
-      email,
-      verified: true, // In a real app, this would be false until email verification
-    };
-    
-    // In a real app, we would save this to a database
-    mockUsers.push(newUser);
-    setCurrentUser(newUser);
-    return true;
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password
+      });
+      
+      if (error) {
+        toast({
+          title: "Registration Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        return false;
+      }
+      
+      toast({
+        title: "Registration Successful",
+        description: "Welcome to SubletNU! Please check your email for verification.",
+      });
+      return true;
+    } catch (error: any) {
+      toast({
+        title: "Registration Error",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+      return false;
+    }
   };
 
-  const logout = () => {
-    setCurrentUser(null);
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: "Logged Out",
+        description: "You have been successfully logged out.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Logout Error",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+    }
   };
 
   // Sublet functions
@@ -144,6 +254,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const value = {
     currentUser,
+    supabaseUser,
+    session,
     sublets,
     messages,
     filteredSublets,
