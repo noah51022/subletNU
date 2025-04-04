@@ -10,9 +10,10 @@ import { useNavigate } from "react-router-dom";
 interface ProfileListingCardProps {
   sublet: Sublet;
   onDelete?: (subletId: string) => void;
+  onEdit?: (subletId: string) => void;
 }
 
-const ProfileListingCard = ({ sublet, onDelete }: ProfileListingCardProps) => {
+const ProfileListingCard = ({ sublet, onDelete, onEdit }: ProfileListingCardProps) => {
   const navigate = useNavigate();
   
   const handleViewClick = () => {
@@ -21,8 +22,11 @@ const ProfileListingCard = ({ sublet, onDelete }: ProfileListingCardProps) => {
 
   const handleEditClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Edit functionality can be implemented in the future
-    console.log("Edit listing:", sublet.id);
+    if (onEdit) {
+      onEdit(sublet.id);
+    } else {
+      navigate(`/edit/${sublet.id}`);
+    }
   };
   
   const handleDeleteClick = (e: React.MouseEvent) => {

@@ -11,6 +11,7 @@ import HomePage from "./pages/HomePage";
 import AuthPage from "./pages/AuthPage";
 import SubletDetailPage from "./pages/SubletDetailPage";
 import CreateSubletPage from "./pages/CreateSubletPage";
+import EditSubletPage from "./pages/EditSubletPage";
 import MessagesPage from "./pages/MessagesPage";
 import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
@@ -31,6 +32,7 @@ const App = () => {
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/sublet/:subletId" element={<SubletDetailPage />} />
               <Route path="/create" element={<CreateSubletPage />} />
+              <Route path="/edit/:subletId" element={<EditSubletPage />} />
               <Route path="/messages" element={<MessagesPage />} />
               <Route path="/messages/:userId" element={<MessagesPage />} />
               <Route path="/profile" element={<ProfilePage />} />

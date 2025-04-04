@@ -1,9 +1,10 @@
+
 import { useParams, useNavigate } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
 import SubletCard from "@/components/SubletCard";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Wifi, Dumbbell, Shield } from "lucide-react";
+import { ArrowLeft, Wifi, Dumbbell, Shield, Check } from "lucide-react";
 import { useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 
@@ -77,6 +78,17 @@ const SubletDetailPage = () => {
                 <span>{amenity}</span>
               </Badge>
             ))}
+            
+            {/* No Broker's Fee Badge */}
+            {sublet.noBrokersFee && (
+              <Badge 
+                variant="outline" 
+                className="flex items-center justify-start px-3 py-2 bg-green-50 text-green-800 border-green-200"
+              >
+                <Check className="h-4 w-4 mr-2" />
+                <span>No Broker's Fee</span>
+              </Badge>
+            )}
           </div>
         </div>
         

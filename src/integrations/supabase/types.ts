@@ -37,6 +37,7 @@ export type Database = {
           gender_preference: string
           id: string
           location: string
+          no_brokers_fee: boolean | null
           photos: string[]
           price: number
           pricing_type: string
@@ -52,6 +53,7 @@ export type Database = {
           gender_preference: string
           id?: string
           location: string
+          no_brokers_fee?: boolean | null
           photos: string[]
           price: number
           pricing_type: string
@@ -67,6 +69,7 @@ export type Database = {
           gender_preference?: string
           id?: string
           location?: string
+          no_brokers_fee?: boolean | null
           photos?: string[]
           price?: number
           pricing_type?: string

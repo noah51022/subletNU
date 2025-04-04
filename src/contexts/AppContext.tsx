@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Sublet, User, Message } from "../types";
 import { mockMessages } from "../services/mockData";
@@ -26,6 +27,7 @@ type AppContextType = {
   register: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   addSublet: (sublet: Omit<Sublet, "id" | "userId" | "userEmail" | "createdAt">) => Promise<void>;
+  updateSublet: (subletId: string, sublet: Partial<Omit<Sublet, "id" | "userId" | "userEmail" | "createdAt">>) => Promise<void>;
   sendMessage: (receiverId: string, text: string) => void;
   getMessagesForUser: (userId: string) => Message[];
 };
@@ -120,6 +122,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               genderPreference: item.gender_preference as "male" | "female" | "any",
               pricingType: item.pricing_type as "firm" | "negotiable",
               amenities: item.amenities || [],
+              noBrokersFee: item.no_brokers_fee || false,
             };
           })
         );
@@ -285,6 +288,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           gender_preference: subletData.genderPreference,
           pricing_type: subletData.pricingType,
           amenities: subletData.amenities,
+          no_brokers_fee: subletData.noBrokersFee,
         });
 
       if (error) {
@@ -304,6 +308,52 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       });
     } catch (error) {
       console.error("Error adding sublet:", error);
+      throw error;
+    }
+  };
+
+  const updateSublet = async (subletId: string, subletData: Partial<Omit<Sublet, "id" | "userId" | "userEmail" | "createdAt">>) => {
+    if (!currentUser) return;
+    
+    try {
+      // Convert to snake_case for Supabase
+      const supabaseData: any = {};
+      
+      if (subletData.price !== undefined) supabaseData.price = subletData.price;
+      if (subletData.location !== undefined) supabaseData.location = subletData.location;
+      if (subletData.distanceFromNEU !== undefined) supabaseData.distance_from_neu = subletData.distanceFromNEU;
+      if (subletData.description !== undefined) supabaseData.description = subletData.description;
+      if (subletData.startDate !== undefined) supabaseData.start_date = subletData.startDate;
+      if (subletData.endDate !== undefined) supabaseData.end_date = subletData.endDate;
+      if (subletData.photos !== undefined) supabaseData.photos = subletData.photos;
+      if (subletData.genderPreference !== undefined) supabaseData.gender_preference = subletData.genderPreference;
+      if (subletData.pricingType !== undefined) supabaseData.pricing_type = subletData.pricingType;
+      if (subletData.amenities !== undefined) supabaseData.amenities = subletData.amenities;
+      if (subletData.noBrokersFee !== undefined) supabaseData.no_brokers_fee = subletData.noBrokersFee;
+      
+      const { error } = await supabase
+        .from('sublets')
+        .update(supabaseData)
+        .eq('id', subletId)
+        .eq('user_id', currentUser.id);  // Ensure the user owns this sublet
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to update your sublet",
+          variant: "destructive",
+        });
+        throw error;
+      }
+
+      fetchSublets();
+      
+      toast({
+        title: "Sublet Updated",
+        description: "Your sublet has been updated successfully.",
+      });
+    } catch (error) {
+      console.error("Error updating sublet:", error);
       throw error;
     }
   };
@@ -355,6 +405,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     register,
     logout,
     addSublet,
+    updateSublet,
     sendMessage,
     getMessagesForUser,
   };
