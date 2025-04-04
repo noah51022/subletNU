@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Sublet, User, Message } from "../types";
 import { mockMessages } from "../services/mockData";
@@ -40,7 +39,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [sublets, setSublets] = useState<Sublet[]>([]);
   const [messages, setMessages] = useState<Message[]>(mockMessages);
   
-  // Filters
   const [maxPrice, setMaxPrice] = useState<number>(1000);
   const [maxDistance, setMaxDistance] = useState<number>(5);
   const [dateRange, setDateRange] = useState<{ start: string | null; end: string | null }>({
@@ -50,15 +48,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [genderFilter, setGenderFilter] = useState<"male" | "female" | "any" | "all">("all");
   const [pricingTypeFilter, setPricingTypeFilter] = useState<"firm" | "negotiable" | "all">("all");
 
-  // Setup Supabase auth listener
   useEffect(() => {
-    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setSupabaseUser(session?.user ?? null);
         
-        // Update our app's user state
         if (session?.user) {
           const appUser: User = {
             id: session.user.id,
@@ -72,12 +67,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setSupabaseUser(session?.user ?? null);
       
-      // Update our app's user state
       if (session?.user) {
         const appUser: User = {
           id: session.user.id,
@@ -91,13 +84,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Fetch sublets from Supabase
   const fetchSublets = async () => {
     try {
-      // Use a proper type assertion to handle the Supabase types
       const { data, error } = await supabase
         .from('sublets')
-        .select('*, profiles:profiles(email)')
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -106,36 +97,43 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (data) {
-        // Transform Supabase data to match our Sublet type
-        const mappedSublets: Sublet[] = data.map(item => ({
-          id: item.id,
-          userId: item.user_id,
-          userEmail: item.profiles?.email || "unknown@northeastern.edu",
-          price: item.price,
-          location: item.location,
-          distanceFromNEU: item.distance_from_neu,
-          startDate: item.start_date,
-          endDate: item.end_date,
-          description: item.description,
-          photos: item.photos,
-          createdAt: item.created_at,
-          genderPreference: item.gender_preference as "male" | "female" | "any",
-          pricingType: item.pricing_type as "firm" | "negotiable",
-          amenities: item.amenities || [],
-        }));
+        const subletsWithEmails: Sublet[] = await Promise.all(
+          data.map(async (item) => {
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('email')
+              .eq('id', item.user_id)
+              .single();
+              
+            return {
+              id: item.id,
+              userId: item.user_id,
+              userEmail: profileData?.email || "unknown@northeastern.edu",
+              price: item.price,
+              location: item.location,
+              distanceFromNEU: item.distance_from_neu,
+              startDate: item.start_date,
+              endDate: item.end_date,
+              description: item.description,
+              photos: item.photos,
+              createdAt: item.created_at,
+              genderPreference: item.gender_preference as "male" | "female" | "any",
+              pricingType: item.pricing_type as "firm" | "negotiable",
+              amenities: item.amenities || [],
+            };
+          })
+        );
 
-        setSublets(mappedSublets);
+        setSublets(subletsWithEmails);
       }
     } catch (error) {
       console.error('Failed to fetch sublets:', error);
     }
   };
 
-  // Fetch sublets whenever auth state changes
   useEffect(() => {
     fetchSublets();
     
-    // Set up subscription for real-time updates to sublets
     const channel = supabase
       .channel('public:sublets')
       .on('postgres_changes', 
@@ -151,7 +149,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [currentUser]);
 
-  // Computed filtered sublets
   const filteredSublets = sublets.filter((sublet) => {
     const priceFilter = sublet.price <= maxPrice;
     const distanceFilter = sublet.distanceFromNEU <= maxDistance;
@@ -174,7 +171,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return priceFilter && distanceFilter && dateFilter && genderFilterMatch && pricingTypeFilterMatch;
   });
 
-  // Auth functions (using Supabase)
   const login = async (email: string, password: string): Promise<boolean> => {
     if (!email.endsWith('@northeastern.edu')) {
       toast({
@@ -271,12 +267,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Sublet functions
   const addSublet = async (subletData: Omit<Sublet, "id" | "userId" | "userEmail" | "createdAt">) => {
     if (!currentUser) return;
     
     try {
-      // Insert into Supabase using type assertions to handle the TypeScript error
       const { error } = await supabase
         .from('sublets')
         .insert({
@@ -291,7 +285,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           gender_preference: subletData.genderPreference,
           pricing_type: subletData.pricingType,
           amenities: subletData.amenities,
-        } as any);  // Use type assertion to bypass TypeScript error
+        });
 
       if (error) {
         toast({
@@ -302,7 +296,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         throw error;
       }
 
-      // Refresh sublets after adding
       fetchSublets();
       
       toast({
@@ -315,7 +308,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Message functions
   const sendMessage = (receiverId: string, text: string) => {
     if (!currentUser) return;
     
