@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Sublet, User, Message } from "../types";
-import { mockSublets, mockUsers, mockMessages } from "../services/mockData";
+import { mockMessages } from "../services/mockData";
 import { supabase } from "@/integrations/supabase/client";
 import { User as SupabaseUser, Session } from "@supabase/supabase-js";
 import { toast } from "@/hooks/use-toast";
@@ -25,7 +25,7 @@ type AppContextType = {
   login: (email: string, password: string) => Promise<boolean>;
   register: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
-  addSublet: (sublet: Omit<Sublet, "id" | "userId" | "userEmail" | "createdAt">) => void;
+  addSublet: (sublet: Omit<Sublet, "id" | "userId" | "userEmail" | "createdAt">) => Promise<void>;
   sendMessage: (receiverId: string, text: string) => void;
   getMessagesForUser: (userId: string) => Message[];
 };
@@ -36,7 +36,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [sublets, setSublets] = useState<Sublet[]>(mockSublets);
+  const [sublets, setSublets] = useState<Sublet[]>([]);
   const [messages, setMessages] = useState<Message[]>(mockMessages);
   
   // Filters
@@ -89,6 +89,65 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Fetch sublets from Supabase
+  const fetchSublets = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('sublets')
+        .select('*, profiles(email)')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching sublets:', error);
+        return;
+      }
+
+      if (data) {
+        // Transform Supabase data to match our Sublet type
+        const mappedSublets: Sublet[] = data.map(item => ({
+          id: item.id,
+          userId: item.user_id,
+          userEmail: item.profiles?.email || "unknown@northeastern.edu",
+          price: item.price,
+          location: item.location,
+          distanceFromNEU: item.distance_from_neu,
+          startDate: item.start_date,
+          endDate: item.end_date,
+          description: item.description,
+          photos: item.photos,
+          createdAt: item.created_at,
+          genderPreference: item.gender_preference as "male" | "female" | "any",
+          pricingType: item.pricing_type as "firm" | "negotiable",
+          amenities: item.amenities || [],
+        }));
+
+        setSublets(mappedSublets);
+      }
+    } catch (error) {
+      console.error('Failed to fetch sublets:', error);
+    }
+  };
+
+  // Fetch sublets whenever auth state changes
+  useEffect(() => {
+    fetchSublets();
+    
+    // Set up subscription for real-time updates to sublets
+    const channel = supabase
+      .channel('public:sublets')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'sublets' }, 
+        () => {
+          fetchSublets();
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser]);
 
   // Computed filtered sublets
   const filteredSublets = sublets.filter((sublet) => {
@@ -211,18 +270,47 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   // Sublet functions
-  const addSublet = (subletData: Omit<Sublet, "id" | "userId" | "userEmail" | "createdAt">) => {
+  const addSublet = async (subletData: Omit<Sublet, "id" | "userId" | "userEmail" | "createdAt">) => {
     if (!currentUser) return;
     
-    const newSublet: Sublet = {
-      ...subletData,
-      id: `sublet${sublets.length + 1}`,
-      userId: currentUser.id,
-      userEmail: currentUser.email,
-      createdAt: new Date().toISOString(),
-    };
-    
-    setSublets([newSublet, ...sublets]);
+    try {
+      // Insert into Supabase
+      const { error } = await supabase
+        .from('sublets')
+        .insert({
+          user_id: currentUser.id,
+          price: subletData.price,
+          location: subletData.location,
+          distance_from_neu: subletData.distanceFromNEU,
+          description: subletData.description,
+          start_date: subletData.startDate,
+          end_date: subletData.endDate,
+          photos: subletData.photos,
+          gender_preference: subletData.genderPreference,
+          pricing_type: subletData.pricingType,
+          amenities: subletData.amenities,
+        });
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to post your sublet",
+          variant: "destructive",
+        });
+        throw error;
+      }
+
+      // Refresh sublets after adding
+      fetchSublets();
+      
+      toast({
+        title: "Sublet Posted",
+        description: "Your sublet has been posted successfully.",
+      });
+    } catch (error) {
+      console.error("Error adding sublet:", error);
+      throw error;
+    }
   };
 
   // Message functions

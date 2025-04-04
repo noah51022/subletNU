@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
@@ -47,7 +46,7 @@ const CreateSubletPage = () => {
     }
   }, [currentUser, navigate]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!startDate || !endDate) {
@@ -71,7 +70,7 @@ const CreateSubletPage = () => {
     setIsSubmitting(true);
     
     try {
-      addSublet({
+      await addSublet({
         price: parseFloat(price),
         location,
         distanceFromNEU: parseFloat(distanceFromNEU),
@@ -84,13 +83,9 @@ const CreateSubletPage = () => {
         amenities,
       });
       
-      toast({
-        title: "Sublet Posted",
-        description: "Your sublet has been posted successfully.",
-      });
-      
       navigate('/');
     } catch (error) {
+      console.error("Error posting sublet:", error);
       toast({
         title: "Error",
         description: "Failed to post your sublet. Please try again.",
@@ -102,8 +97,6 @@ const CreateSubletPage = () => {
   };
 
   const handleAddPhoto = () => {
-    // In a real app, we would upload a photo here
-    // For this demo, we'll use placeholder images
     const demoPhotos = [
       "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
       "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",

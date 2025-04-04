@@ -27,6 +27,54 @@ export type Database = {
         }
         Relationships: []
       }
+      sublets: {
+        Row: {
+          amenities: string[] | null
+          created_at: string
+          description: string
+          distance_from_neu: number
+          end_date: string
+          gender_preference: string
+          id: string
+          location: string
+          photos: string[]
+          price: number
+          pricing_type: string
+          start_date: string
+          user_id: string
+        }
+        Insert: {
+          amenities?: string[] | null
+          created_at?: string
+          description: string
+          distance_from_neu: number
+          end_date: string
+          gender_preference: string
+          id?: string
+          location: string
+          photos: string[]
+          price: number
+          pricing_type: string
+          start_date: string
+          user_id: string
+        }
+        Update: {
+          amenities?: string[] | null
+          created_at?: string
+          description?: string
+          distance_from_neu?: number
+          end_date?: string
+          gender_preference?: string
+          id?: string
+          location?: string
+          photos?: string[]
+          price?: number
+          pricing_type?: string
+          start_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
