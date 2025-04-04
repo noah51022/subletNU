@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
@@ -19,9 +20,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import BottomNav from "@/components/BottomNav";
 import { toast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, differenceInCalendarMonths } from "date-fns";
 
 const CreateSubletPage = () => {
   const { currentUser, addSublet } = useApp();
@@ -39,12 +41,26 @@ const CreateSubletPage = () => {
   const [amenities, setAmenities] = useState<string[]>([]);
   const [newAmenity, setNewAmenity] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [noBrokersFee, setNoBrokersFee] = useState(false);
   
   useEffect(() => {
     if (!currentUser) {
       navigate('/auth');
     }
   }, [currentUser, navigate]);
+
+  // Calculate total cost based on price and date range
+  const totalCost = useMemo(() => {
+    if (!startDate || !endDate || !price || isNaN(parseFloat(price))) {
+      return null;
+    }
+    
+    // Calculate number of months (rounded up for partial months)
+    const months = differenceInCalendarMonths(endDate, startDate) + 1;
+    
+    // Calculate total
+    return parseFloat(price) * months;
+  }, [startDate, endDate, price]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,6 +97,7 @@ const CreateSubletPage = () => {
         genderPreference,
         pricingType,
         amenities,
+        noBrokersFee,
       });
       
       navigate('/');
@@ -259,6 +276,20 @@ const CreateSubletPage = () => {
             </Select>
           </div>
           
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="brokersFee" 
+              checked={noBrokersFee} 
+              onCheckedChange={() => setNoBrokersFee(!noBrokersFee)}
+            />
+            <label
+              htmlFor="brokersFee"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              No Broker's Fee
+            </label>
+          </div>
+          
           <div className="space-y-2">
             <label className="text-sm font-medium">
               Amenities
@@ -351,6 +382,17 @@ const CreateSubletPage = () => {
             </div>
           </div>
           
+          {/* Total Cost Display */}
+          {totalCost !== null && (
+            <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
+              <div className="text-sm text-gray-600">Estimated Total Cost:</div>
+              <div className="text-xl font-bold text-neu-red">${totalCost.toFixed(2)}</div>
+              <div className="text-xs text-gray-500">
+                Based on ${price}/month for {differenceInCalendarMonths(endDate!, startDate!) + 1} month(s)
+              </div>
+            </div>
+          )}
+          
           <div className="space-y-2">
             <label htmlFor="description" className="text-sm font-medium">
               Description (max 200 characters)
@@ -385,3 +427,4 @@ const CreateSubletPage = () => {
 };
 
 export default CreateSubletPage;
+
