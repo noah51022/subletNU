@@ -1,8 +1,7 @@
 
 import { useState } from "react";
-import { Check, Search } from "lucide-react";
+import { Check, Search, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -63,6 +62,18 @@ const AMENITIES_OPTIONS = {
 // Flatten the categories for search functionality
 const ALL_AMENITIES = Object.values(AMENITIES_OPTIONS).flat();
 
+// Common amenities that users frequently select
+const COMMON_AMENITIES = [
+  "Furnished",
+  "Private Bathroom",
+  "Air Conditioning",
+  "Laundry (In-Unit)",
+  "High-Speed Wi-Fi",
+  "Utilities Included",
+  "Free Parking",
+  "Pets Allowed"
+];
+
 type AmenitiesSelectorProps = {
   selectedAmenities: string[];
   onChange: (amenities: string[]) => void;
@@ -86,37 +97,59 @@ const AmenitiesSelector = ({ selectedAmenities, onChange }: AmenitiesSelectorPro
     : [];
 
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap gap-2 my-2">
-        {selectedAmenities.map(amenity => (
-          <Badge 
-            key={amenity} 
-            variant="secondary"
-            className="px-2 py-1 text-sm"
+    <div className="space-y-4">
+      {/* Quick select common amenities */}
+      <div className="flex flex-wrap gap-2">
+        {COMMON_AMENITIES.map(amenity => (
+          <Badge
+            key={amenity}
+            variant={selectedAmenities.includes(amenity) ? "default" : "outline"}
+            className={`
+              cursor-pointer px-2 py-1 text-sm
+              ${selectedAmenities.includes(amenity) 
+                ? "bg-neu-red hover:bg-neu-red/90" 
+                : "hover:bg-gray-100"}
+            `}
+            onClick={() => toggleAmenity(amenity)}
           >
+            {selectedAmenities.includes(amenity) && (
+              <Check className="mr-1 h-3 w-3" />
+            )}
             {amenity}
-            <button 
-              className="ml-1 rounded-full hover:bg-gray-200 p-1"
-              onClick={() => toggleAmenity(amenity)}
-            >
-              ×
-            </button>
           </Badge>
         ))}
-
-        {selectedAmenities.length === 0 && (
-          <div className="text-sm text-gray-500">No amenities selected</div>
-        )}
       </div>
 
+      {/* Selected amenities list */}
+      <div className="flex flex-wrap gap-2 my-2">
+        {selectedAmenities
+          .filter(amenity => !COMMON_AMENITIES.includes(amenity))
+          .map(amenity => (
+            <Badge 
+              key={amenity} 
+              variant="secondary"
+              className="px-2 py-1 text-sm"
+            >
+              {amenity}
+              <button 
+                className="ml-1 rounded-full hover:bg-gray-200 p-1"
+                onClick={() => toggleAmenity(amenity)}
+              >
+                ×
+              </button>
+            </Badge>
+          ))}
+      </div>
+
+      {/* Search more amenities */}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button 
             variant="outline" 
             className="w-full justify-start text-left font-normal"
           >
-            <Search className="mr-2 h-4 w-4" />
-            <span>Select amenities...</span>
+            <Plus className="mr-2 h-4 w-4" />
+            <span>Add more amenities...</span>
           </Button>
         </PopoverTrigger>
         <PopoverContent className="p-0 w-[300px]" align="start">
