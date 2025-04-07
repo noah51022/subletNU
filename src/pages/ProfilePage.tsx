@@ -62,6 +62,7 @@ const ProfilePage = () => {
           genderPreference: item.gender_preference as "male" | "female" | "any",
           pricingType: item.pricing_type as "firm" | "negotiable",
           amenities: item.amenities || [],
+          noBrokersFee: item.no_brokers_fee || false,
         }));
 
         setMyListings(mySublets);
