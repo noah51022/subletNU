@@ -11,6 +11,8 @@ const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { login, register, currentUser } = useApp();
   const navigate = useNavigate();
@@ -43,10 +45,12 @@ const AuthPage = () => {
           navigate('/');
         }
       } else {
-        const success = await register(email, password);
+        // Pass additional user metadata for first and last name
+        const success = await register(email, password, {
+          first_name: firstName,
+          last_name: lastName
+        });
         if (success) {
-          // For demo purposes, we'll navigate to home
-          // In production, you might want to show a verification page
           toast({
             title: "Check Your Email",
             description: "Please check your Northeastern email for a verification link.",
@@ -82,6 +86,42 @@ const AuthPage = () => {
           
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {!isLogin && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label htmlFor="firstName" className="text-sm font-medium">
+                        First Name
+                      </label>
+                      <Input
+                        id="firstName"
+                        type="text"
+                        placeholder="Jane"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required={!isLogin}
+                        disabled={isLoading}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label htmlFor="lastName" className="text-sm font-medium">
+                        Last Name
+                      </label>
+                      <Input
+                        id="lastName"
+                        type="text"
+                        placeholder="Doe"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        required={!isLogin}
+                        disabled={isLoading}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+              
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm font-medium">
                   Northeastern Email
