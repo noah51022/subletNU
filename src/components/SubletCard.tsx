@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Sublet } from "../types";
 import { Card } from "@/components/ui/card";
@@ -16,7 +15,7 @@ interface SubletCardProps {
 const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const navigate = useNavigate();
-  
+
   const handleNextPhoto = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (currentPhotoIndex < sublet.photos.length - 1) {
@@ -68,8 +67,8 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
     const info = genderInfo[preference];
 
     return (
-      <Badge 
-        variant="outline" 
+      <Badge
+        variant="outline"
         className={`${info.className} border-none text-gray-700 font-medium`}
       >
         {info.label}
@@ -79,11 +78,11 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
 
   const getPricingBadge = () => {
     return (
-      <Badge 
-        variant="outline" 
+      <Badge
+        variant="outline"
         className={`${sublet.pricingType === 'negotiable' ? 'bg-green-100 hover:bg-green-100' : 'bg-gray-100 hover:bg-gray-100'} border-none text-gray-700 font-medium ml-1`}
       >
-        {sublet.pricingType === 'negotiable' ? 'Negotiable' : 'Firm'}
+        {sublet.pricingType === 'negotiable' ? 'Negotiable Price' : 'Firm Price'}
       </Badge>
     );
   };
@@ -95,13 +94,13 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
 
     // Display up to 3 amenities
     const displayedAmenities = sublet.amenities.slice(0, 3);
-    
+
     return (
       <div className="flex flex-wrap gap-1 mt-1">
         {displayedAmenities.map((amenity) => (
-          <Badge 
-            key={amenity} 
-            variant="outline" 
+          <Badge
+            key={amenity}
+            variant="outline"
             className="bg-gray-50 text-xs px-1.5 py-0.5 border-none"
           >
             {amenity}
@@ -112,20 +111,20 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
   };
 
   return (
-    <Card 
+    <Card
       className={`sublet-card ${expanded ? 'w-full' : ''} cursor-pointer`}
       onClick={handleCardClick}
     >
       <div className="photo-carousel">
-        <img 
+        <img
           src={sublet.photos[currentPhotoIndex]}
-          alt={`Sublet at ${sublet.location}`} 
+          alt={`Sublet at ${sublet.location}`}
           className="carousel-image"
         />
-        
+
         {sublet.photos.length > 1 && (
           <>
-            <button 
+            <button
               onClick={handlePrevPhoto}
               disabled={currentPhotoIndex === 0}
               className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full p-1"
@@ -133,7 +132,7 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
             >
               <ChevronLeft size={20} />
             </button>
-            <button 
+            <button
               onClick={handleNextPhoto}
               disabled={currentPhotoIndex === sublet.photos.length - 1}
               className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white rounded-full p-1"
@@ -147,7 +146,7 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
           </>
         )}
       </div>
-      
+
       <div className="p-4">
         <div className="flex justify-between items-start">
           <div>
@@ -159,23 +158,23 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
               {getPricingBadge()}
             </div>
             <div className="text-sm text-gray-600">
-              {sublet.distanceFromNEU} mi from NEU • {formatDateRange()}
+              {sublet.distanceFromNEU} mi from NU • {formatDateRange()}
             </div>
             <p className="mt-1 text-gray-800">{sublet.description}</p>
-            
+
             {/* Display amenity badges */}
             {getAmenityBadges()}
           </div>
         </div>
-        
+
         <div className="mt-3 flex justify-between items-center">
           <div className="text-xs text-gray-500">
             Posted by: {sublet.userEmail}
           </div>
-          
-          <Button 
-            variant="outline" 
-            size="sm" 
+
+          <Button
+            variant="outline"
+            size="sm"
             className="text-neu-red border-neu-red hover:bg-neu-red hover:text-white"
             onClick={handleMessageClick}
           >

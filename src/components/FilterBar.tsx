@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -20,19 +19,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import AmenitiesSelector from "@/components/AmenitiesSelector";
 
 const FilterBar = () => {
-  const { 
-    maxPrice, 
-    setMaxPrice, 
-    maxDistance, 
-    setMaxDistance, 
-    dateRange, 
+  const {
+    maxPrice,
+    setMaxPrice,
+    maxDistance,
+    setMaxDistance,
+    dateRange,
     setDateRange,
     genderFilter,
     setGenderFilter,
     pricingTypeFilter,
-    setPricingTypeFilter
+    setPricingTypeFilter,
+    amenitiesFilter,
+    setAmenitiesFilter
   } = useApp();
   const [isExpanded, setIsExpanded] = useState(false);
   const [startDate, setStartDate] = useState<Date | undefined>(dateRange.start ? new Date(dateRange.start) : undefined);
@@ -74,21 +76,22 @@ const FilterBar = () => {
     setDateRange({ start: null, end: null });
     setGenderFilter("all");
     setPricingTypeFilter("all");
+    setAmenitiesFilter([]);
   };
 
   return (
     <div className="filters-bar">
       <div className="flex justify-between items-center">
         <h2 className="font-bold text-lg">Filters</h2>
-        <Button 
-          variant="ghost" 
-          size="sm" 
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => setIsExpanded(!isExpanded)}
         >
           {isExpanded ? 'Hide' : 'Show'}
         </Button>
       </div>
-      
+
       {isExpanded && (
         <div className="mt-2 space-y-4 animate-fade-in">
           <div>
@@ -102,7 +105,7 @@ const FilterBar = () => {
               className="mt-2"
             />
           </div>
-          
+
           <div>
             <label className="text-sm font-medium">Max Distance: {maxDistance} miles</label>
             <Slider
@@ -114,12 +117,12 @@ const FilterBar = () => {
               className="mt-2"
             />
           </div>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div>
               <label className="text-sm font-medium">Gender Preference</label>
-              <Select 
-                value={genderFilter} 
+              <Select
+                value={genderFilter}
                 onValueChange={(value) => setGenderFilter(value as "male" | "female" | "any" | "all")}
               >
                 <SelectTrigger className="w-full mt-1">
@@ -135,11 +138,11 @@ const FilterBar = () => {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div>
               <label className="text-sm font-medium">Pricing Type</label>
-              <Select 
-                value={pricingTypeFilter} 
+              <Select
+                value={pricingTypeFilter}
                 onValueChange={(value) => setPricingTypeFilter(value as "firm" | "negotiable" | "all")}
               >
                 <SelectTrigger className="w-full mt-1">
@@ -155,7 +158,15 @@ const FilterBar = () => {
               </Select>
             </div>
           </div>
-          
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Amenities</label>
+            <AmenitiesSelector
+              selectedAmenities={amenitiesFilter}
+              onChange={setAmenitiesFilter}
+            />
+          </div>
+
           <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:space-x-2">
             <div className="flex-1">
               <label className="text-sm font-medium">Start Date</label>
@@ -180,7 +191,7 @@ const FilterBar = () => {
                 </PopoverContent>
               </Popover>
             </div>
-            
+
             <div className="flex-1">
               <label className="text-sm font-medium">End Date</label>
               <Popover>
@@ -205,11 +216,11 @@ const FilterBar = () => {
               </Popover>
             </div>
           </div>
-          
+
           <div className="pt-2 pb-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={clearFilters}
               className="w-full"
             >

@@ -17,11 +17,13 @@ type AppContextType = {
   dateRange: { start: string | null; end: string | null };
   genderFilter: "male" | "female" | "any" | "all";
   pricingTypeFilter: "firm" | "negotiable" | "all";
+  amenitiesFilter: string[];
   setMaxPrice: (price: number) => void;
   setMaxDistance: (distance: number) => void;
   setDateRange: (range: { start: string | null; end: string | null }) => void;
   setGenderFilter: (gender: "male" | "female" | "any" | "all") => void;
   setPricingTypeFilter: (type: "firm" | "negotiable" | "all") => void;
+  setAmenitiesFilter: (amenities: string[]) => void;
   login: (email: string, password: string) => Promise<boolean>;
   register: (email: string, password: string, metadata?: { first_name?: string; last_name?: string }) => Promise<boolean>;
   logout: () => Promise<void>;
@@ -39,7 +41,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [sublets, setSublets] = useState<Sublet[]>([]);
   const [messages, setMessages] = useState<Message[]>(mockMessages);
-  
+
   const [maxPrice, setMaxPrice] = useState<number>(1000);
   const [maxDistance, setMaxDistance] = useState<number>(5);
   const [dateRange, setDateRange] = useState<{ start: string | null; end: string | null }>({
@@ -48,13 +50,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   });
   const [genderFilter, setGenderFilter] = useState<"male" | "female" | "any" | "all">("all");
   const [pricingTypeFilter, setPricingTypeFilter] = useState<"firm" | "negotiable" | "all">("all");
+  const [amenitiesFilter, setAmenitiesFilter] = useState<string[]>([]);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setSupabaseUser(session?.user ?? null);
-        
+
         if (session?.user) {
           const appUser: User = {
             id: session.user.id,
@@ -71,7 +74,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setSupabaseUser(session?.user ?? null);
-      
+
       if (session?.user) {
         const appUser: User = {
           id: session.user.id,
@@ -105,7 +108,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               .select('email')
               .eq('id', item.user_id)
               .single();
-              
+
             return {
               id: item.id,
               userId: item.user_id,
@@ -135,17 +138,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     fetchSublets();
-    
+
     const channel = supabase
       .channel('public:sublets')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'sublets' }, 
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'sublets' },
         () => {
           fetchSublets();
         }
       )
       .subscribe();
-      
+
     return () => {
       supabase.removeChannel(channel);
     };
@@ -154,23 +157,27 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const filteredSublets = sublets.filter((sublet) => {
     const priceFilter = sublet.price <= maxPrice;
     const distanceFilter = sublet.distanceFromNEU <= maxDistance;
-    
+
     let dateFilter = true;
     if (dateRange.start && dateRange.end) {
       const start = new Date(dateRange.start);
       const end = new Date(dateRange.end);
       const subletStart = new Date(sublet.startDate);
       const subletEnd = new Date(sublet.endDate);
-      
+
       dateFilter = (
         (subletStart <= end && subletEnd >= start)
       );
     }
-    
+
     const genderFilterMatch = genderFilter === "all" || sublet.genderPreference === genderFilter;
     const pricingTypeFilterMatch = pricingTypeFilter === "all" || sublet.pricingType === pricingTypeFilter;
-    
-    return priceFilter && distanceFilter && dateFilter && genderFilterMatch && pricingTypeFilterMatch;
+
+    // Check if sublet has all selected amenities
+    const amenitiesFilterMatch = amenitiesFilter.length === 0 ||
+      (sublet.amenities && amenitiesFilter.every(amenity => sublet.amenities.includes(amenity)));
+
+    return priceFilter && distanceFilter && dateFilter && genderFilterMatch && pricingTypeFilterMatch && amenitiesFilterMatch;
   });
 
   const login = async (email: string, password: string): Promise<boolean> => {
@@ -182,13 +189,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       });
       return false;
     }
-    
+
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
-      
+
       if (error) {
         toast({
           title: "Login Failed",
@@ -197,7 +204,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         });
         return false;
       }
-      
+
       toast({
         title: "Login Successful",
         description: "Welcome back to SubletNU!",
@@ -222,7 +229,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       });
       return false;
     }
-    
+
     try {
       const { error } = await supabase.auth.signUp({
         email,
@@ -231,7 +238,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           data: metadata
         }
       });
-      
+
       if (error) {
         toast({
           title: "Registration Failed",
@@ -240,7 +247,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         });
         return false;
       }
-      
+
       toast({
         title: "Registration Successful",
         description: "Welcome to SubletNU! Please check your email for verification.",
@@ -274,7 +281,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const addSublet = async (subletData: Omit<Sublet, "id" | "userId" | "userEmail" | "createdAt">) => {
     if (!currentUser) return;
-    
+
     try {
       const { error } = await supabase
         .from('sublets')
@@ -303,7 +310,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
 
       fetchSublets();
-      
+
       toast({
         title: "Sublet Posted",
         description: "Your sublet has been posted successfully.",
@@ -316,10 +323,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const updateSublet = async (subletId: string, subletData: Partial<Omit<Sublet, "id" | "userId" | "userEmail" | "createdAt">>) => {
     if (!currentUser) return;
-    
+
     try {
       const supabaseData: any = {};
-      
+
       if (subletData.price !== undefined) supabaseData.price = subletData.price;
       if (subletData.location !== undefined) supabaseData.location = subletData.location;
       if (subletData.distanceFromNEU !== undefined) supabaseData.distance_from_neu = subletData.distanceFromNEU;
@@ -331,7 +338,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (subletData.pricingType !== undefined) supabaseData.pricing_type = subletData.pricingType;
       if (subletData.amenities !== undefined) supabaseData.amenities = subletData.amenities;
       if (subletData.noBrokersFee !== undefined) supabaseData.no_brokers_fee = subletData.noBrokersFee;
-      
+
       const { error } = await supabase
         .from('sublets')
         .update(supabaseData)
@@ -348,7 +355,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
 
       fetchSublets();
-      
+
       toast({
         title: "Sublet Updated",
         description: "Your sublet has been updated successfully.",
@@ -361,7 +368,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const sendMessage = (receiverId: string, text: string) => {
     if (!currentUser) return;
-    
+
     const newMessage: Message = {
       id: `msg${messages.length + 1}`,
       senderId: currentUser.id,
@@ -369,18 +376,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       text,
       timestamp: new Date().toISOString(),
     };
-    
+
     setMessages([...messages, newMessage]);
   };
 
   const getMessagesForUser = (userId: string): Message[] => {
     if (!currentUser) return [];
-    
+
     return messages.filter(
       (msg) =>
         (msg.senderId === currentUser.id && msg.receiverId === userId) ||
         (msg.senderId === userId && msg.receiverId === currentUser.id)
-    ).sort((a, b) => 
+    ).sort((a, b) =>
       new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
   };
@@ -397,11 +404,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     dateRange,
     genderFilter,
     pricingTypeFilter,
+    amenitiesFilter,
     setMaxPrice,
     setMaxDistance,
     setDateRange,
     setGenderFilter,
     setPricingTypeFilter,
+    setAmenitiesFilter,
     login,
     register,
     logout,

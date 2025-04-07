@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
@@ -24,11 +23,12 @@ import BottomNav from "@/components/BottomNav";
 import { toast } from "@/hooks/use-toast";
 import { format, differenceInCalendarMonths } from "date-fns";
 import AmenitiesSelector from "@/components/AmenitiesSelector";
+import LocationAutocomplete from "@/components/LocationAutocomplete";
 
 const CreateSubletPage = () => {
   const { currentUser, addSublet } = useApp();
   const navigate = useNavigate();
-  
+
   const [price, setPrice] = useState("");
   const [location, setLocation] = useState("");
   const [distanceFromNEU, setDistanceFromNEU] = useState("");
@@ -41,7 +41,7 @@ const CreateSubletPage = () => {
   const [amenities, setAmenities] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [noBrokersFee, setNoBrokersFee] = useState(false);
-  
+
   useEffect(() => {
     if (!currentUser) {
       navigate('/auth');
@@ -53,17 +53,39 @@ const CreateSubletPage = () => {
     if (!startDate || !endDate || !price || isNaN(parseFloat(price))) {
       return null;
     }
-    
+
     // Calculate number of months (rounded up for partial months)
     const months = differenceInCalendarMonths(endDate, startDate) + 1;
-    
+
     // Calculate total
     return parseFloat(price) * months;
   }, [startDate, endDate, price]);
 
+  const handlePlaceSelect = (place: google.maps.places.PlaceResult) => {
+    if (place.formatted_address) {
+      setLocation(place.formatted_address);
+    } else {
+      console.error("Selected place does not have a formatted address:", place);
+      toast({
+        title: "Address Error",
+        description: "Could not get a valid address from the selection.",
+        variant: "destructive",
+      });
+      setLocation("");
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    if (!location) {
+      toast({
+        title: "Missing Location",
+        description: "Please select a valid address.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (!startDate || !endDate) {
       toast({
         title: "Missing Dates",
@@ -72,7 +94,7 @@ const CreateSubletPage = () => {
       });
       return;
     }
-    
+
     if (photos.length === 0) {
       toast({
         title: "No Photos",
@@ -81,9 +103,9 @@ const CreateSubletPage = () => {
       });
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
     try {
       await addSublet({
         price: parseFloat(price),
@@ -98,7 +120,7 @@ const CreateSubletPage = () => {
         amenities,
         noBrokersFee,
       });
-      
+
       navigate('/');
     } catch (error) {
       console.error("Error posting sublet:", error);
@@ -118,7 +140,7 @@ const CreateSubletPage = () => {
       "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
       "https://images.unsplash.com/photo-1721322800607-8c38375eef04?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
     ];
-    
+
     if (photos.length < 5) {
       const randomIndex = Math.floor(Math.random() * demoPhotos.length);
       setPhotos([...photos, demoPhotos[randomIndex]]);
@@ -136,17 +158,17 @@ const CreateSubletPage = () => {
   return (
     <div className="pb-20 max-w-2xl mx-auto">
       <header className="bg-neu-red text-white p-4 flex items-center">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="text-white hover:bg-neu-red/80" 
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-white hover:bg-neu-red/80"
           onClick={() => navigate('/')}
         >
           <ArrowLeft />
         </Button>
         <h1 className="text-xl font-bold ml-2">Post a Sublet</h1>
       </header>
-      
+
       <div className="p-4">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
@@ -157,7 +179,7 @@ const CreateSubletPage = () => {
                   <img src={photo} alt={`Sublet ${index}`} className="w-full h-full object-cover" />
                 </div>
               ))}
-              
+
               {photos.length < 5 && (
                 <button
                   type="button"
@@ -172,7 +194,7 @@ const CreateSubletPage = () => {
               <p className="text-sm text-gray-500 mt-2">Add at least one photo (required)</p>
             )}
           </div>
-          
+
           <div className="space-y-2">
             <label htmlFor="price" className="text-sm font-medium">
               Price ($/month)
@@ -186,21 +208,17 @@ const CreateSubletPage = () => {
               required
             />
           </div>
-          
+
           <div className="space-y-2">
             <label htmlFor="location" className="text-sm font-medium">
               Location
             </label>
-            <Input
-              id="location"
-              type="text"
-              placeholder="e.g., Huntington Ave"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              required
+            <LocationAutocomplete
+              onPlaceSelect={handlePlaceSelect}
+              initialValue={location}
             />
           </div>
-          
+
           <div className="space-y-2">
             <label htmlFor="distance" className="text-sm font-medium">
               Distance from Northeastern (miles)
@@ -209,19 +227,25 @@ const CreateSubletPage = () => {
               id="distance"
               type="number"
               step="0.1"
+              min="0"
               placeholder="e.g., 0.5"
               value={distanceFromNEU}
-              onChange={(e) => setDistanceFromNEU(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === "" || parseFloat(value) >= 0) {
+                  setDistanceFromNEU(value);
+                }
+              }}
               required
             />
           </div>
-          
+
           <div className="space-y-2">
             <label htmlFor="genderPreference" className="text-sm font-medium">
               Gender Preference
             </label>
-            <Select 
-              value={genderPreference} 
+            <Select
+              value={genderPreference}
               onValueChange={(value) => setGenderPreference(value as "male" | "female" | "any")}
             >
               <SelectTrigger className="w-full">
@@ -234,13 +258,13 @@ const CreateSubletPage = () => {
               </SelectContent>
             </Select>
           </div>
-          
+
           <div className="space-y-2">
             <label htmlFor="pricingType" className="text-sm font-medium">
               Pricing Type
             </label>
-            <Select 
-              value={pricingType} 
+            <Select
+              value={pricingType}
               onValueChange={(value) => setPricingType(value as "firm" | "negotiable")}
             >
               <SelectTrigger className="w-full">
@@ -252,11 +276,11 @@ const CreateSubletPage = () => {
               </SelectContent>
             </Select>
           </div>
-          
+
           <div className="flex items-center space-x-2">
-            <Checkbox 
-              id="brokersFee" 
-              checked={noBrokersFee} 
+            <Checkbox
+              id="brokersFee"
+              checked={noBrokersFee}
               onCheckedChange={() => setNoBrokersFee(!noBrokersFee)}
             />
             <label
@@ -266,17 +290,17 @@ const CreateSubletPage = () => {
               No Broker's Fee
             </label>
           </div>
-          
+
           <div className="space-y-2">
             <label className="text-sm font-medium">
               Amenities
             </label>
-            <AmenitiesSelector 
-              selectedAmenities={amenities} 
-              onChange={setAmenities} 
+            <AmenitiesSelector
+              selectedAmenities={amenities}
+              onChange={setAmenities}
             />
           </div>
-          
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Start Date</label>
@@ -301,7 +325,7 @@ const CreateSubletPage = () => {
                 </PopoverContent>
               </Popover>
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium">End Date</label>
               <Popover>
@@ -326,7 +350,7 @@ const CreateSubletPage = () => {
               </Popover>
             </div>
           </div>
-          
+
           {/* Total Cost Display */}
           {totalCost !== null && (
             <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
@@ -337,7 +361,7 @@ const CreateSubletPage = () => {
               </div>
             </div>
           )}
-          
+
           <div className="space-y-2">
             <label htmlFor="description" className="text-sm font-medium">
               Description (max 200 characters)
@@ -355,7 +379,7 @@ const CreateSubletPage = () => {
               {description.length}/200
             </p>
           </div>
-          
+
           <Button
             type="submit"
             className="w-full bg-neu-red hover:bg-neu-red/90"
@@ -365,7 +389,7 @@ const CreateSubletPage = () => {
           </Button>
         </form>
       </div>
-      
+
       <BottomNav />
     </div>
   );
