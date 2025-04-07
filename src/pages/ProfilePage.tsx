@@ -6,15 +6,17 @@ import BottomNav from "@/components/BottomNav";
 import ProfileListingCard from "@/components/ProfileListingCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { LogOut, Loader2 } from "lucide-react";
+import { LogOut, Loader2, User } from "lucide-react";
 import { Sublet } from "../types";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const ProfilePage = () => {
   const { currentUser, logout } = useApp();
   const [myListings, setMyListings] = useState<Sublet[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<{ first_name: string | null, last_name: string | null } | null>(null);
   const navigate = useNavigate();
   
   useEffect(() => {
@@ -22,8 +24,32 @@ const ProfilePage = () => {
       navigate('/auth');
     } else {
       fetchMyListings();
+      fetchUserProfile();
     }
   }, [currentUser, navigate]);
+
+  const fetchUserProfile = async () => {
+    if (!currentUser) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('first_name, last_name')
+        .eq('id', currentUser.id)
+        .single();
+        
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        return;
+      }
+      
+      if (data) {
+        setUserProfile(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch user profile:', error);
+    }
+  };
 
   const fetchMyListings = async () => {
     if (!currentUser) return;
@@ -114,6 +140,23 @@ const ProfilePage = () => {
 
   if (!currentUser) return null;
 
+  const getDisplayName = () => {
+    if (userProfile?.first_name && userProfile?.last_name) {
+      return `${userProfile.first_name} ${userProfile.last_name}`;
+    } else if (userProfile?.first_name) {
+      return userProfile.first_name;
+    } else if (userProfile?.last_name) {
+      return userProfile.last_name;
+    }
+    return "Anonymous User";
+  };
+
+  const getInitials = () => {
+    const firstName = userProfile?.first_name || '';
+    const lastName = userProfile?.last_name || '';
+    return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || currentUser.email.charAt(0).toUpperCase();
+  };
+
   return (
     <div className="pb-20 max-w-2xl mx-auto">
       <header className="bg-neu-red text-white p-4 flex justify-between items-center">
@@ -129,9 +172,14 @@ const ProfilePage = () => {
       </header>
       
       <div className="p-4">
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold">Account</h2>
-          <p className="text-gray-600">{currentUser.email}</p>
+        <div className="mb-6 flex items-center">
+          <Avatar className="h-16 w-16 mr-4 bg-neu-red text-white">
+            <AvatarFallback>{getInitials()}</AvatarFallback>
+          </Avatar>
+          <div>
+            <h2 className="text-lg font-semibold">{getDisplayName()}</h2>
+            <p className="text-gray-600">{currentUser.email}</p>
+          </div>
         </div>
         
         <Tabs defaultValue="listings" className="w-full">
@@ -183,9 +231,26 @@ const ProfilePage = () => {
           <TabsContent value="settings">
             <div className="space-y-4">
               <div className="p-4 border rounded-lg">
-                <h3 className="font-medium mb-2">Email Address</h3>
-                <p className="text-sm text-gray-600 mb-3">{currentUser.email}</p>
-                <p className="text-xs text-gray-500">
+                <h3 className="font-medium mb-2">Personal Information</h3>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <div>
+                    <p className="text-xs text-gray-500">First Name</p>
+                    <p className="text-sm">{userProfile?.first_name || 'Not set'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Last Name</p>
+                    <p className="text-sm">{userProfile?.last_name || 'Not set'}</p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Email Address</p>
+                  <p className="text-sm">{currentUser.email}</p>
+                </div>
+              </div>
+              
+              <div className="p-4 border rounded-lg">
+                <h3 className="font-medium mb-2">Email Verification</h3>
+                <p className="text-xs text-gray-500 mb-2">
                   {currentUser.verified ? 
                     "Your email has been verified." : 
                     "Please check your inbox to verify your email address."
