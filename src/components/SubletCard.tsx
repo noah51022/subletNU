@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Sublet } from "../types";
 import { Card } from "@/components/ui/card";
@@ -87,6 +88,29 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
     );
   };
 
+  const getAmenityBadges = () => {
+    if (!sublet.amenities || sublet.amenities.length === 0) {
+      return null;
+    }
+
+    // Display up to 3 amenities
+    const displayedAmenities = sublet.amenities.slice(0, 3);
+    
+    return (
+      <div className="flex flex-wrap gap-1 mt-1">
+        {displayedAmenities.map((amenity) => (
+          <Badge 
+            key={amenity} 
+            variant="outline" 
+            className="bg-gray-50 text-xs px-1.5 py-0.5 border-none"
+          >
+            {amenity}
+          </Badge>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <Card 
       className={`sublet-card ${expanded ? 'w-full' : ''} cursor-pointer`}
@@ -138,6 +162,9 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
               {sublet.distanceFromNEU} mi from NEU • {formatDateRange()}
             </div>
             <p className="mt-1 text-gray-800">{sublet.description}</p>
+            
+            {/* Display amenity badges */}
+            {getAmenityBadges()}
           </div>
         </div>
         
