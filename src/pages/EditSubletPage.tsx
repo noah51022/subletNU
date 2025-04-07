@@ -14,13 +14,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import BottomNav from "@/components/BottomNav";
 import { toast } from "@/hooks/use-toast";
 import { format, differenceInCalendarMonths } from "date-fns";
-import { CalendarIcon, ArrowLeft, X, Plus, Loader2 } from "lucide-react";
+import { CalendarIcon, ArrowLeft, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import AmenitiesSelector from "@/components/AmenitiesSelector";
 
 const EditSubletPage = () => {
   const { subletId } = useParams<{ subletId: string }>();
@@ -40,7 +40,6 @@ const EditSubletPage = () => {
   const [genderPreference, setGenderPreference] = useState<"male" | "female" | "any">("any");
   const [pricingType, setPricingType] = useState<"firm" | "negotiable">("firm");
   const [amenities, setAmenities] = useState<string[]>([]);
-  const [newAmenity, setNewAmenity] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [noBrokersFee, setNoBrokersFee] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -172,20 +171,6 @@ const EditSubletPage = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
-  
-  const handleAddAmenity = () => {
-    if (!newAmenity.trim()) return;
-    
-    if (!amenities.includes(newAmenity.trim())) {
-      setAmenities([...amenities, newAmenity.trim()]);
-    }
-    
-    setNewAmenity("");
-  };
-  
-  const handleRemoveAmenity = (index: number) => {
-    setAmenities(amenities.filter((_, i) => i !== index));
   };
 
   if (isLoading) {
@@ -363,46 +348,10 @@ const EditSubletPage = () => {
         
         <div className="space-y-2">
           <label className="text-sm font-medium">Amenities</label>
-          
-          <div className="flex flex-wrap gap-2 mb-2">
-            {amenities.map((amenity, index) => (
-              <Badge 
-                key={index} 
-                variant="secondary"
-                className="px-2 py-1 flex items-center gap-1"
-              >
-                {amenity}
-                <X 
-                  size={14} 
-                  className="cursor-pointer" 
-                  onClick={() => handleRemoveAmenity(index)}
-                />
-              </Badge>
-            ))}
-          </div>
-          
-          <div className="flex gap-2">
-            <Input
-              placeholder="Add amenity (e.g., WiFi, Gym)"
-              value={newAmenity}
-              onChange={(e) => setNewAmenity(e.target.value)}
-              className="flex-1"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleAddAmenity();
-                }
-              }}
-            />
-            <Button 
-              type="button" 
-              variant="outline"
-              onClick={handleAddAmenity}
-            >
-              <Plus size={16} />
-              <span className="ml-1">Add</span>
-            </Button>
-          </div>
+          <AmenitiesSelector 
+            selectedAmenities={amenities} 
+            onChange={setAmenities} 
+          />
         </div>
         
         {/* Total Cost Display */}
