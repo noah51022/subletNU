@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Sublet, User, Message } from "../types";
 import { mockMessages } from "../services/mockData";
@@ -24,7 +23,7 @@ type AppContextType = {
   setGenderFilter: (gender: "male" | "female" | "any" | "all") => void;
   setPricingTypeFilter: (type: "firm" | "negotiable" | "all") => void;
   login: (email: string, password: string) => Promise<boolean>;
-  register: (email: string, password: string) => Promise<boolean>;
+  register: (email: string, password: string, metadata?: { first_name?: string; last_name?: string }) => Promise<boolean>;
   logout: () => Promise<void>;
   addSublet: (sublet: Omit<Sublet, "id" | "userId" | "userEmail" | "createdAt">) => Promise<void>;
   updateSublet: (subletId: string, sublet: Partial<Omit<Sublet, "id" | "userId" | "userEmail" | "createdAt">>) => Promise<void>;
@@ -214,7 +213,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const register = async (email: string, password: string): Promise<boolean> => {
+  const register = async (email: string, password: string, metadata?: { first_name?: string; last_name?: string }): Promise<boolean> => {
     if (!email.endsWith('@northeastern.edu')) {
       toast({
         title: "Invalid Email",
@@ -227,7 +226,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { error } = await supabase.auth.signUp({
         email,
-        password
+        password,
+        options: {
+          data: metadata
+        }
       });
       
       if (error) {
@@ -316,7 +318,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (!currentUser) return;
     
     try {
-      // Convert to snake_case for Supabase
       const supabaseData: any = {};
       
       if (subletData.price !== undefined) supabaseData.price = subletData.price;
@@ -335,7 +336,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         .from('sublets')
         .update(supabaseData)
         .eq('id', subletId)
-        .eq('user_id', currentUser.id);  // Ensure the user owns this sublet
+        .eq('user_id', currentUser.id);
 
       if (error) {
         toast({
