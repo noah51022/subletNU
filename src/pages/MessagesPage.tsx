@@ -7,18 +7,38 @@ import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Send } from "lucide-react";
-import { mockUsers } from "@/services/mockData";
+import { formatDistanceToNow } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+
+type UserProfile = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string;
+};
 
 const MessagesPage = () => {
   const { userId } = useParams<{ userId?: string }>();
   const { currentUser } = useAuth();
   const { sublets } = useSublet();
-  const { messages, sendMessage, getMessagesForUser } = useMessage();
+  const {
+    messages,
+    sendMessage,
+    getMessagesForUser,
+    getDisplayName,
+    getInitials,
+    fetchUserProfiles,
+    fetchMessages,
+    markMessagesAsRead,
+    getUnreadCount,
+    isLoadingMessages
+  } = useMessage();
   const navigate = useNavigate();
   const location = useLocation();
 
   const [newMessage, setNewMessage] = useState("");
   const [activeUser, setActiveUser] = useState<string | null>(userId || null);
+  const [isFetching, setIsFetching] = useState(false);
 
   const subletId = location.state?.subletId;
 
@@ -28,6 +48,9 @@ const MessagesPage = () => {
     const uniqueContactIds = new Set<string>();
 
     messages.forEach(msg => {
+      // Skip messages where user is messaging themselves
+      if (msg.senderId === msg.receiverId) return;
+
       if (msg.senderId === currentUser.id) {
         uniqueContactIds.add(msg.receiverId);
       } else if (msg.receiverId === currentUser.id) {
@@ -35,28 +58,80 @@ const MessagesPage = () => {
       }
     });
 
-    return Array.from(uniqueContactIds).map(id => {
-      const user = mockUsers.find(u => u.id === id);
+    const contacts = Array.from(uniqueContactIds).map(id => {
+      const contactMessages = messages.filter(
+        msg => (msg.senderId === id && msg.receiverId === currentUser.id) ||
+          (msg.receiverId === id && msg.senderId === currentUser.id)
+      );
+
+      const lastMessage = contactMessages.sort(
+        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      )[0];
+
       return {
         id,
-        email: user?.email || "Unknown User",
+        lastMessage,
       };
+    });
+
+    return contacts.sort((a, b) => {
+      if (!a.lastMessage || !b.lastMessage) return 0;
+      return new Date(b.lastMessage.timestamp).getTime() - new Date(a.lastMessage.timestamp).getTime();
     });
   };
 
   const contacts = getUniqueContacts();
-  const activeUserEmail = mockUsers.find(u => u.id === activeUser)?.email || "Unknown User";
   const activeUserMessages = activeUser ? getMessagesForUser(activeUser) : [];
+  const activeUserSublet = activeUser ? sublets.find(s => s.userId === activeUser) : null;
 
-  const activeUserSublet = activeUser
-    ? sublets.find(s => s.userId === activeUser)
-    : null;
+  // Prevent self-messaging
+  useEffect(() => {
+    if (userId === currentUser?.id) {
+      navigate('/messages');
+    }
+  }, [userId, currentUser, navigate]);
 
+  // Update activeUser when userId changes
+  useEffect(() => {
+    if (userId && userId !== currentUser?.id) {
+      setActiveUser(userId);
+    } else {
+      setActiveUser(null);
+    }
+  }, [userId, currentUser]);
+
+  // Fetch messages and profiles when opening a conversation
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!activeUser || isFetching || activeUser === currentUser?.id) return;
+
+      setIsFetching(true);
+      try {
+        await Promise.all([
+          fetchUserProfiles([activeUser]),
+          fetchMessages(),
+          markMessagesAsRead(activeUser)
+        ]);
+      } finally {
+        setIsFetching(false);
+      }
+    };
+
+    fetchData();
+  }, [activeUser, currentUser?.id, fetchUserProfiles, fetchMessages, markMessagesAsRead, isFetching]);
+
+  // Fetch profiles for contacts
   useEffect(() => {
     if (!currentUser) {
       navigate('/auth');
+      return;
     }
-  }, [currentUser, navigate]);
+
+    const userIds = contacts.map(contact => contact.id);
+    if (userIds.length > 0) {
+      fetchUserProfiles(userIds);
+    }
+  }, [currentUser, contacts, navigate, fetchUserProfiles]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,6 +152,9 @@ const MessagesPage = () => {
 
   if (!currentUser) return null;
 
+  // Prevent rendering if trying to message self
+  if (userId === currentUser.id) return null;
+
   if (!activeUser && !userId) {
     return (
       <div className="pb-20 max-w-2xl mx-auto">
@@ -94,21 +172,48 @@ const MessagesPage = () => {
             </div>
           ) : (
             <div className="space-y-2">
-              {contacts.map(contact => (
-                <button
-                  key={contact.id}
-                  className="w-full p-4 bg-white rounded-lg shadow flex items-center hover:bg-gray-50"
-                  onClick={() => navigate(`/messages/${contact.id}`)}
-                >
-                  <div className="w-10 h-10 rounded-full bg-neu-gold flex items-center justify-center text-white font-bold">
-                    {contact.email.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="ml-3 text-left">
-                    <p className="font-medium">{contact.email}</p>
-                    <p className="text-sm text-gray-500">Tap to view conversation</p>
-                  </div>
-                </button>
-              ))}
+              {contacts.map(contact => {
+                const unreadCount = getUnreadCount(contact.id);
+                return (
+                  <button
+                    key={contact.id}
+                    className="w-full p-4 bg-white rounded-lg shadow flex items-center hover:bg-gray-50"
+                    onClick={() => {
+                      navigate(`/messages/${contact.id}`, { state: { subletId } });
+                    }}
+                  >
+                    <div className="relative">
+                      <div className="w-12 h-12 rounded-full bg-neu-gold flex items-center justify-center text-white font-bold">
+                        {getInitials(contact.id)}
+                      </div>
+                      {unreadCount > 0 && (
+                        <div className="absolute -top-1 -right-1 bg-neu-red text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                          {unreadCount}
+                        </div>
+                      )}
+                    </div>
+                    <div className="ml-3 flex-1 text-left">
+                      <div className="flex justify-between items-start">
+                        <p className={`font-medium ${unreadCount > 0 ? 'text-neu-red' : ''}`}>
+                          {getDisplayName(contact.id)}
+                        </p>
+                        {contact.lastMessage && (
+                          <span className="text-xs text-gray-500">
+                            {formatDistanceToNow(new Date(contact.lastMessage.timestamp), { addSuffix: true })}
+                          </span>
+                        )}
+                      </div>
+                      {contact.lastMessage && (
+                        <p className={`text-sm truncate ${unreadCount > 0 ? 'text-black font-medium' : 'text-gray-500'
+                          }`}>
+                          {contact.lastMessage.senderId === currentUser.id ? "You: " : ""}
+                          {contact.lastMessage.text}
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
@@ -130,7 +235,9 @@ const MessagesPage = () => {
           <ArrowLeft />
         </Button>
         <div className="ml-2">
-          <h1 className="text-lg font-bold">{activeUserEmail}</h1>
+          <h1 className="text-lg font-bold">
+            {activeUser ? getDisplayName(activeUser) : "Unknown User"}
+          </h1>
           {activeUserSublet && (
             <p className="text-xs opacity-80">
               {activeUserSublet.location} - ${activeUserSublet.price}/mo

@@ -69,7 +69,7 @@ const FilterBar = () => {
   };
 
   const clearFilters = () => {
-    setMaxPrice(1000);
+    setMaxPrice(3000);
     setMaxDistance(5);
     setStartDate(undefined);
     setEndDate(undefined);
@@ -97,7 +97,7 @@ const FilterBar = () => {
           <div>
             <label className="text-sm font-medium">Max Price: ${maxPrice}</label>
             <Slider
-              defaultValue={[maxPrice]}
+              value={[maxPrice]}
               max={6000}
               min={300}
               step={50}
@@ -109,7 +109,7 @@ const FilterBar = () => {
           <div>
             <label className="text-sm font-medium">Max Distance: {maxDistance} miles</label>
             <Slider
-              defaultValue={[maxDistance]}
+              value={[maxDistance]}
               max={10}
               min={0.5}
               step={0.5}

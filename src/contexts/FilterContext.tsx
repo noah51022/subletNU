@@ -22,7 +22,7 @@ const FilterContext = createContext<FilterContextType | undefined>(undefined);
 
 export const FilterProvider = ({ children }: { children: ReactNode }) => {
   const { sublets } = useSublet();
-  const [maxPrice, setMaxPrice] = useState<number>(1000);
+  const [maxPrice, setMaxPrice] = useState<number>(3000);
   const [maxDistance, setMaxDistance] = useState<number>(5);
   const [dateRange, setDateRange] = useState<{ start: string | null; end: string | null }>({
     start: null,
