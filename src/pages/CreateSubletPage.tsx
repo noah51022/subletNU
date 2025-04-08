@@ -77,11 +77,13 @@ const CreateSubletPage = () => {
     return parseFloat(price) * months;
   }, [startDate, endDate, price]);
 
-  // useCallback for handlePlaceSelect remains, but its role changes slightly
-  const handlePlaceSelect = useCallback((place: google.maps.places.PlaceResult | null, distanceInMiles: number | null) => {
-    if (place && place.formatted_address) {
-      // Refine the input value with the official formatted address
-      setLocationInputValue(place.formatted_address);
+  // Update handlePlaceSelect to accept the newer Place type
+  const handlePlaceSelect = useCallback((place: google.maps.places.Place | null, distanceInMiles: number | null) => {
+    // LocationAutocomplete already called setInputValue with the formatted address.
+    // This function now only needs to handle the distance calculation result.
+    // Use place.formattedAddress (available on Place type)
+    if (place && place.formattedAddress) {
+      // REMOVED: setLocationInputValue(place.formatted_address);
 
       if (distanceInMiles !== null) {
         const roundedDistance = distanceInMiles.toFixed(1);
@@ -113,7 +115,7 @@ const CreateSubletPage = () => {
       }
       // No toast if place was null (likely just cleared input)
     }
-  }, [setLocationInputValue, setDistanceFromNEU]); // Dependencies remain the same
+  }, [setDistanceFromNEU]); // Remove setLocationInputValue from dependencies
 
   // Handle file selection
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {

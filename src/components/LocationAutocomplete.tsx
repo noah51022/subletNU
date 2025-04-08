@@ -3,22 +3,12 @@ import { useLoadScript } from '@react-google-maps/api';
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 
-// Define the custom element type if typescript doesn't know it
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      'gmp-place-autocomplete': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & { class?: string; };
-    }
-  }
-  interface HTMLElementTagNameMap {
-    'gmp-place-autocomplete': google.maps.places.PlaceAutocompleteElement;
-  }
-}
+// No need for custom element declaration if using programmatic instantiation
 
-const libraries: ("places" | "routes")[] = ["places", "routes"];
+const libraries: ("places" | "routes" | "marker")[] = ["places", "routes", "marker"]; // Added marker library based on example
 
 interface LocationAutocompleteProps {
-  onPlaceSelect: (place: google.maps.places.PlaceResult | null, distanceInMiles: number | null) => void;
+  onPlaceSelect: (place: google.maps.places.Place | null, distanceInMiles: number | null) => void; // Use Place type
   inputValue: string;
   setInputValue: (value: string) => void;
   destinationCoordinates: google.maps.LatLngLiteral;
@@ -33,33 +23,116 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string,
     libraries,
-    // Specify the solution channel if required by Google's terms/warnings
-    // solutionChannel: 'GMP_visdev_rgmfe_v1', // Example, check Google's docs if needed
   });
 
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  // State to hold the HIDDEN autocomplete DOM node
-  const [autocompleteNode, setAutocompleteNode] = useState<google.maps.places.PlaceAutocompleteElement | null>(null);
+  // Ref for the container div
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  // Ref for the autocomplete instance
+  const autocompleteRef = useRef<google.maps.places.PlaceAutocompleteElement | null>(null);
+  // Ref for the internal input element
+  const internalInputRef = useRef<HTMLInputElement | null>(null);
+  // Refs for listeners to aid cleanup
+  const placeSelectListenerRef = useRef<any | null>(null); // Using any for listener type due to potential SDK nuances
+  const inputListenerRef = useRef<any | null>(null);
 
-  // Ref for the place select listener function
-  const placeSelectListenerRef = useRef<((event: Event) => void) | null>(null);
 
-  // Callback ref for the HIDDEN Google component
-  const autocompleteCallbackRef = useCallback((node: google.maps.places.PlaceAutocompleteElement | null) => {
-    setAutocompleteNode(node);
-  }, []);
-
-  // useEffect for attaching listener to the HIDDEN Google component
+  // useEffect for creating and managing the autocomplete element
   useEffect(() => {
-    if (autocompleteNode && isLoaded) {
-      const autocompleteElement = autocompleteNode;
-      // Set fields needed for getPlace()
-      autocompleteElement.setAttribute('place-fields', 'formatted_address,geometry,name');
+    // Ensure Google Maps API is loaded and container exists
+    if (isLoaded && google.maps && google.maps.places && containerRef.current) {
+      const container = containerRef.current;
 
-      // --- calculateDistance function (can stay here or be defined outside useEffect if stable) ---
+      // Prevent re-initialization if already done
+      if (autocompleteRef.current) return;
+
+      // Programmatically create the Autocomplete Element with empty options
+      const placeAutocomplete = new google.maps.places.PlaceAutocompleteElement({});
+      autocompleteRef.current = placeAutocomplete;
+
+      // Append the element to the container
+      container.innerHTML = ''; // Clear container first
+      container.appendChild(placeAutocomplete);
+
+      // --- Find the internal input element --- (Crucial step)
+      // We need to wait briefly for the component to render its internals
+      const findInputInterval = setInterval(() => {
+        const inputElement = placeAutocomplete.querySelector('input');
+        if (inputElement) {
+          clearInterval(findInputInterval); // Stop polling
+          internalInputRef.current = inputElement;
+
+          // Apply necessary attributes & styles
+          inputElement.placeholder = "Enter address";
+          inputElement.required = true;
+          inputElement.style.outline = 'none';
+          inputElement.style.border = 'none';
+          inputElement.style.backgroundColor = 'transparent';
+          inputElement.style.width = '100%';
+          inputElement.style.height = '100%';
+
+          // Set initial value if provided
+          if (inputValue && !inputElement.value) {
+            inputElement.value = inputValue;
+          }
+
+          // --- Add Input Listener --- (Only after input is found)
+          const handleInputChange = (event: Event) => {
+            const target = event.target as HTMLInputElement;
+            setInputValue(target.value);
+          };
+          inputListenerRef.current = handleInputChange;
+          inputElement.addEventListener('input', handleInputChange);
+        }
+      }, 50); // Poll every 50ms
+      // --- End Find Internal Input --- 
+
+      // --- Add Place Select Listener --- (Using gmp-select)
+      const handlePlaceSelect = async (event: any) => { // Use 'any' for event type from custom element
+        const placePrediction = event.placePrediction as google.maps.places.PlacePrediction | undefined;
+        if (!placePrediction) return;
+
+        const place = placePrediction.toPlace();
+        try {
+          await place.fetchFields({ fields: ['formattedAddress', 'location', 'displayName'] });
+
+          // Validate required fields
+          if (place.location && typeof place.formattedAddress === 'string' && place.formattedAddress.length > 0) {
+            // Update parent state
+            setInputValue(place.formattedAddress);
+
+            // Update internal input visually (might be redundant if controlled pattern works)
+            if (internalInputRef.current) {
+              internalInputRef.current.value = place.formattedAddress;
+            }
+
+            // Calculate distance
+            const originCoords = {
+              lat: place.location.lat(),
+              lng: place.location.lng(),
+            };
+            const distance = await calculateDistance(originCoords, destinationCoordinates);
+            onPlaceSelect(place, distance); // Pass the fetched Place object
+
+          } else {
+            console.warn("Fetched place lacked location or formattedAddress:", place);
+            toast({ title: "Invalid Selection", description: "Selected item lacks required details.", variant: "destructive" });
+            onPlaceSelect(null, null);
+          }
+        } catch (error) {
+          console.error("Error fetching place details or calculating distance:", error);
+          toast({ title: "Error", description: "Could not retrieve place details.", variant: "destructive" });
+          onPlaceSelect(null, null);
+        }
+      };
+      placeSelectListenerRef.current = handlePlaceSelect;
+      placeAutocomplete.addEventListener('gmp-select', handlePlaceSelect);
+      // --- End Place Select Listener ---
+
+      // --- calculateDistance function (nested or outside) ---
       const calculateDistance = (origin: google.maps.LatLngLiteral, destination: google.maps.LatLngLiteral): Promise<number | null> => {
         return new Promise((resolve) => {
-          if (!google || !google.maps || !google.maps.DistanceMatrixService) {
+          if (!google?.maps?.DistanceMatrixService) {
+            console.warn("DistanceMatrixService not loaded");
             resolve(null);
             return;
           }
@@ -72,11 +145,12 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
               unitSystem: google.maps.UnitSystem.IMPERIAL, // Request miles
             },
             (response, status) => {
-              if (status === google.maps.DistanceMatrixStatus.OK && response && response.rows[0]?.elements[0]?.status === google.maps.DistanceMatrixElementStatus.OK) {
+              if (status === google.maps.DistanceMatrixStatus.OK && response?.rows[0]?.elements[0]?.status === google.maps.DistanceMatrixElementStatus.OK) {
                 const distanceInMeters = response.rows[0].elements[0].distance.value;
                 const distanceInMiles = distanceInMeters * 0.000621371;
                 resolve(distanceInMiles);
               } else {
+                console.warn("DistanceMatrix request failed:", status, response);
                 resolve(null);
               }
             }
@@ -85,94 +159,46 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
       };
       // --- End calculateDistance ---
 
-      // --- retrievePlaceAndCalculateDistance function ---
-      const retrievePlaceAndCalculateDistance = async () => {
-        if (!autocompleteElement) {
-          return;
-        }
-        const place = (autocompleteElement as any).getPlace() as google.maps.places.PlaceResult | undefined;
-
-        if (place?.formatted_address && place.geometry?.location) {
-          setInputValue(place.formatted_address);
-          const originCoords = {
-            lat: place.geometry.location.lat(),
-            lng: place.geometry.location.lng(),
-          };
-          try {
-            const distance = await calculateDistance(originCoords, destinationCoordinates);
-            onPlaceSelect(place, distance);
-          } catch (error) {
-            onPlaceSelect(place, null);
-          }
-        } else {
-          if (place && !place.formatted_address) {
-            toast({ title: "Invalid Place", description: "Selected place doesn't have a valid address.", variant: "destructive" });
-          }
-          if (place) {
-            onPlaceSelect(null, null);
-          }
-        }
-      };
-      // --- End retrievePlaceAndCalculateDistance ---
-
-      // --- Define handleInputChange in the outer scope of the effect ---
-      const handleInputChange = (event: Event) => {
-        const target = event.target as HTMLInputElement;
-        setInputValue(target.value);
-      };
-      // --- End handleInputChange definition ---
-
-      // --- Event Listener Setup ---
-      const handlePlaceSelectEvent = (event: Event) => {
-        retrievePlaceAndCalculateDistance();
-      };
-
-      placeSelectListenerRef.current = handlePlaceSelectEvent;
-      autocompleteElement.addEventListener('gmp-placeselect', handlePlaceSelectEvent);
-      // --- End Event Listener Setup ---
-
-      // --- Apply input setup and add input listener ---
-      const inputElement = autocompleteElement.querySelector('input');
-      if (inputElement) {
-        inputRef.current = inputElement;
-        inputElement.placeholder = "Enter address";
-        inputElement.required = true;
-        if (inputValue && !inputElement.value) {
-          inputElement.value = inputValue;
-        }
-
-        // Add Input Event Listener 
-        inputElement.addEventListener('input', handleInputChange);
-      }
-      // --- End Apply input setup ---
-
-      // Return the cleanup function from useEffect
+      // --- Cleanup function --- 
       return () => {
-        if (placeSelectListenerRef.current) {
-          autocompleteElement.removeEventListener('gmp-placeselect', placeSelectListenerRef.current);
-          placeSelectListenerRef.current = null;
+        clearInterval(findInputInterval); // Clear polling interval
+        if (placeSelectListenerRef.current && autocompleteRef.current) {
+          autocompleteRef.current.removeEventListener('gmp-select', placeSelectListenerRef.current);
         }
-        // Cleanup input listener - check inputElement again
-        // Re-find inputElement or rely on closure? Relying on closure is safer here.
-        if (inputElement) {
-          inputElement.removeEventListener('input', handleInputChange);
+        if (inputListenerRef.current && internalInputRef.current) {
+          internalInputRef.current.removeEventListener('input', inputListenerRef.current);
         }
+        // Optional: Remove the element itself from the DOM if containerRef.current exists?
+        // Usually React handles component unmount cleanup well, but explicit removal can be added.
+        // if (containerRef.current && autocompleteRef.current) {
+        //    containerRef.current.removeChild(autocompleteRef.current);
+        // }
+        autocompleteRef.current = null;
+        internalInputRef.current = null;
+        placeSelectListenerRef.current = null;
+        inputListenerRef.current = null;
       };
     }
-  }, [autocompleteNode, isLoaded, onPlaceSelect, setInputValue, destinationCoordinates, inputValue]);
-  // --- End useEffect for Setup and Cleanup ---
+  }, [isLoaded]); // Run only when isLoaded changes
 
-  // --- Enhanced Error Handling ---
+  // Effect to sync input value when parent state changes (Controlled Component Part)
+  useEffect(() => {
+    if (internalInputRef.current && internalInputRef.current.value !== inputValue) {
+      internalInputRef.current.value = inputValue;
+    }
+  }, [inputValue]);
+
+
+  // --- Error & Loading States ---
   if (loadError) {
-    console.error("[LocationAutocomplete] Google Maps Load Error:", loadError); // Log the specific error
+    console.error("[LocationAutocomplete] Google Maps Load Error:", loadError);
     toast({
       title: "Address Lookup Error",
       description: "Could not load Google Maps Autocomplete. Please check console or try again later.",
       variant: "destructive",
     });
-    // Render a clear error message instead of just a disabled input
     return (
-      <div className="p-2 border border-destructive bg-destructive/10 rounded-md text-destructive">
+      <div className="p-2 border border-destructive bg-destructive/10 rounded-md text-destructive text-sm">
         Address lookup failed to load. Please try refreshing the page.
       </div>
     );
@@ -185,34 +211,21 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
         placeholder="Loading address lookup..."
         disabled={true}
         required
+        className="w-full"
       />
     );
   }
-  // --- End Enhanced Error Handling ---
+  // --- End Error & Loading States ---
 
-  // --- End Error Handling --- 
-
-  // --- Render the VISIBLE controlled input AND the HIDDEN Google component --- 
+  // --- Render Container ---
+  // Apply Shadcn styles to the container div
   return (
-    <>
-      <Input
-        ref={inputRef} // Attach ref if needed elsewhere
-        type="text"
-        placeholder="Enter address"
-        required
-        value={inputValue} // Controlled by parent state
-        onChange={(e) => setInputValue(e.target.value)} // Directly update parent state
-        className="w-full" // Ensure it takes full width
-      />
-      {/* Render the Google component but hide it */}
-      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}> {/* Better hiding method */}
-        <gmp-place-autocomplete
-          ref={autocompleteCallbackRef}
-        // No need for class="w-full" if hidden
-        >
-        </gmp-place-autocomplete>
-      </div>
-    </>
+    <div
+      ref={containerRef}
+      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {/* Autocomplete element will be appended here by useEffect */}
+    </div>
   );
 };
 
