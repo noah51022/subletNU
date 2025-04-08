@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useApp } from "@/contexts/AppContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,9 +13,9 @@ const AuthPage = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { login, register, currentUser } = useApp();
+  const { login, register, currentUser } = useAuth();
   const navigate = useNavigate();
-  
+
   // Redirect if already logged in
   useEffect(() => {
     if (currentUser) {
@@ -26,7 +25,7 @@ const AuthPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email.endsWith('@northeastern.edu')) {
       toast({
         title: "Invalid Email",
@@ -35,9 +34,9 @@ const AuthPage = () => {
       });
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       if (isLogin) {
         const success = await login(email, password);
@@ -71,19 +70,19 @@ const AuthPage = () => {
           <h1 className="text-3xl font-bold text-neu-red">SubletNU</h1>
           <p className="text-gray-600 mt-2">Find and post sublets for Northeastern University</p>
         </div>
-        
+
         <Card>
           <CardHeader>
             <CardTitle>
               {isLogin ? "Log In to SubletNU" : "Sign Up for SubletNU"}
             </CardTitle>
             <CardDescription>
-              {isLogin 
-                ? "Enter your Northeastern email and password" 
+              {isLogin
+                ? "Enter your Northeastern email and password"
                 : "Create a new account with your Northeastern email"}
             </CardDescription>
           </CardHeader>
-          
+
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {!isLogin && (
@@ -103,7 +102,7 @@ const AuthPage = () => {
                         disabled={isLoading}
                       />
                     </div>
-                    
+
                     <div className="space-y-2">
                       <label htmlFor="lastName" className="text-sm font-medium">
                         Last Name
@@ -121,7 +120,7 @@ const AuthPage = () => {
                   </div>
                 </>
               )}
-              
+
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm font-medium">
                   Northeastern Email
@@ -136,7 +135,7 @@ const AuthPage = () => {
                   disabled={isLoading}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <label htmlFor="password" className="text-sm font-medium">
                   Password
@@ -156,9 +155,9 @@ const AuthPage = () => {
                   </p>
                 )}
               </div>
-              
-              <Button 
-                type="submit" 
+
+              <Button
+                type="submit"
                 className="w-full bg-neu-red hover:bg-neu-red/90"
                 disabled={isLoading}
               >
@@ -166,7 +165,7 @@ const AuthPage = () => {
               </Button>
             </form>
           </CardContent>
-          
+
           <CardFooter>
             <Button
               variant="link"

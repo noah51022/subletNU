@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { useApp } from "@/contexts/AppContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSublet } from "@/contexts/SubletContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,7 +30,8 @@ import LocationAutocomplete from "@/components/LocationAutocomplete";
 const NEU_COORDINATES = { lat: 42.3398, lng: -71.0892 };
 
 const CreateSubletPage = () => {
-  const { currentUser, addSublet, uploadPhoto } = useApp();
+  const { currentUser } = useAuth();
+  const { addSublet, uploadPhoto } = useSublet();
   const navigate = useNavigate();
 
   const [price, setPrice] = useState("");

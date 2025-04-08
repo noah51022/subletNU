@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { useApp } from "@/contexts/AppContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSublet } from "@/contexts/SubletContext";
+import { useMessage } from "@/contexts/MessageContext";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +11,9 @@ import { mockUsers } from "@/services/mockData";
 
 const MessagesPage = () => {
   const { userId } = useParams<{ userId?: string }>();
-  const { currentUser, sublets, messages, sendMessage, getMessagesForUser } = useApp();
+  const { currentUser } = useAuth();
+  const { sublets } = useSublet();
+  const { messages, sendMessage, getMessagesForUser } = useMessage();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -146,8 +150,8 @@ const MessagesPage = () => {
             <div
               key={msg.id}
               className={`max-w-[75%] p-3 rounded-lg ${msg.senderId === currentUser.id
-                  ? "bg-neu-red text-white ml-auto"
-                  : "bg-gray-200 text-black"
+                ? "bg-neu-red text-white ml-auto"
+                : "bg-gray-200 text-black"
                 }`}
             >
               <p>{msg.text}</p>

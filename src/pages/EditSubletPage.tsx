@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useApp } from "@/contexts/AppContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSublet } from "@/contexts/SubletContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,7 +28,8 @@ const NEU_COORDINATES = { lat: 42.3398, lng: -71.0892 };
 
 const EditSubletPage = () => {
   const { subletId } = useParams<{ subletId: string }>();
-  const { currentUser, sublets, updateSublet } = useApp();
+  const { currentUser } = useAuth();
+  const { sublets, updateSublet } = useSublet();
   const navigate = useNavigate();
 
   const sublet = sublets.find(s => s.id === subletId);

@@ -1,5 +1,5 @@
-
-import { useApp } from "@/contexts/AppContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useFilter } from "@/contexts/FilterContext";
 import FilterBar from "@/components/FilterBar";
 import SubletCard from "@/components/SubletCard";
 import BottomNav from "@/components/BottomNav";
@@ -8,9 +8,10 @@ import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 
 const HomePage = () => {
-  const { currentUser, filteredSublets } = useApp();
+  const { currentUser } = useAuth();
+  const { filteredSublets } = useFilter();
   const navigate = useNavigate();
-  
+
   useEffect(() => {
     if (!currentUser) {
       navigate('/auth');
@@ -24,9 +25,9 @@ const HomePage = () => {
       <header className="bg-neu-red text-white p-4 text-center">
         <h1 className="text-xl font-bold">SubletNU</h1>
       </header>
-      
+
       <FilterBar />
-      
+
       <div className="mt-4 pb-16">
         {filteredSublets === undefined ? (
           <div className="flex justify-center items-center py-20">
@@ -43,7 +44,7 @@ const HomePage = () => {
           ))
         )}
       </div>
-      
+
       <BottomNav />
     </div>
   );

@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useApp } from "@/contexts/AppContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSublet } from "@/contexts/SubletContext";
 import SubletCard from "@/components/SubletCard";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 
 const SubletDetailPage = () => {
   const { subletId } = useParams<{ subletId: string }>();
-  const { sublets, currentUser, isLoadingAuth, isLoadingSublets } = useApp();
+  const { currentUser, isLoadingAuth } = useAuth();
+  const { sublets, isLoadingSublets } = useSublet();
   const navigate = useNavigate();
   const { toast } = useToast();
 

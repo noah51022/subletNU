@@ -10,7 +10,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { useApp } from "@/contexts/AppContext";
+import { useFilter } from "@/contexts/FilterContext";
 import {
   Select,
   SelectContent,
@@ -24,18 +24,18 @@ import AmenitiesSelector from "@/components/AmenitiesSelector";
 const FilterBar = () => {
   const {
     maxPrice,
-    setMaxPrice,
     maxDistance,
-    setMaxDistance,
     dateRange,
-    setDateRange,
     genderFilter,
-    setGenderFilter,
     pricingTypeFilter,
-    setPricingTypeFilter,
     amenitiesFilter,
-    setAmenitiesFilter
-  } = useApp();
+    setMaxPrice,
+    setMaxDistance,
+    setDateRange,
+    setGenderFilter,
+    setPricingTypeFilter,
+    setAmenitiesFilter,
+  } = useFilter();
   const [isExpanded, setIsExpanded] = useState(false);
   const [startDate, setStartDate] = useState<Date | undefined>(dateRange.start ? new Date(dateRange.start) : undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(dateRange.end ? new Date(dateRange.end) : undefined);

@@ -1,0 +1,194 @@
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { User } from "../types";
+import { supabase } from "@/integrations/supabase/client";
+import { User as SupabaseUser, Session } from "@supabase/supabase-js";
+import { toast } from "@/hooks/use-toast";
+
+type AuthContextType = {
+  currentUser: User | null;
+  supabaseUser: SupabaseUser | null;
+  session: Session | null;
+  isLoadingAuth: boolean;
+  login: (email: string, password: string) => Promise<boolean>;
+  register: (email: string, password: string, metadata?: { first_name?: string; last_name?: string }) => Promise<boolean>;
+  logout: () => Promise<void>;
+};
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoadingAuth(true);
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (isMounted) {
+        setSession(session);
+        setSupabaseUser(session?.user ?? null);
+        if (session?.user) {
+          const appUser: User = {
+            id: session.user.id,
+            email: session.user.email || "",
+            verified: session.user.email_confirmed_at !== null
+          };
+          setCurrentUser(appUser);
+        } else {
+          setCurrentUser(null);
+        }
+        setIsLoadingAuth(false);
+      }
+    }).catch(() => {
+      if (isMounted) setIsLoadingAuth(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (isMounted) {
+          setSession(session);
+          const user = session?.user ?? null;
+          setSupabaseUser(user);
+
+          if (user) {
+            const appUser: User = {
+              id: user.id,
+              email: user.email || "",
+              verified: user.email_confirmed_at !== null
+            };
+            setCurrentUser(appUser);
+          } else {
+            setCurrentUser(null);
+          }
+        }
+      }
+    );
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const login = async (email: string, password: string): Promise<boolean> => {
+    if (!email.endsWith('@northeastern.edu')) {
+      toast({
+        title: "Invalid Email",
+        description: "You must use a northeastern.edu email address.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) {
+        toast({
+          title: "Login Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      toast({
+        title: "Login Successful",
+        description: "Welcome back to SubletNU!",
+      });
+      return true;
+    } catch (error: any) {
+      toast({
+        title: "Login Error",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  const register = async (email: string, password: string, metadata?: { first_name?: string; last_name?: string }): Promise<boolean> => {
+    if (!email.endsWith('@northeastern.edu')) {
+      toast({
+        title: "Invalid Email",
+        description: "You must use a northeastern.edu email address.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: metadata
+        }
+      });
+
+      if (error) {
+        toast({
+          title: "Registration Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      toast({
+        title: "Registration Successful",
+        description: "Welcome to SubletNU! Please check your email for verification.",
+      });
+      return true;
+    } catch (error: any) {
+      toast({
+        title: "Registration Error",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: "Logged Out",
+        description: "You have been successfully logged out.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Logout Error",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const value = {
+    currentUser,
+    supabaseUser,
+    session,
+    isLoadingAuth,
+    login,
+    register,
+    logout,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+}; 
