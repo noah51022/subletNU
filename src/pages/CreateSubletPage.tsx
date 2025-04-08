@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
-import { ArrowLeft, CalendarIcon, ImagePlus } from "lucide-react";
+import { ArrowLeft, CalendarIcon, ImagePlus, X } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -25,12 +25,15 @@ import { format, differenceInCalendarMonths } from "date-fns";
 import AmenitiesSelector from "@/components/AmenitiesSelector";
 import LocationAutocomplete from "@/components/LocationAutocomplete";
 
+// Define Northeastern University coordinates
+const NEU_COORDINATES = { lat: 42.3398, lng: -71.0892 };
+
 const CreateSubletPage = () => {
-  const { currentUser, addSublet } = useApp();
+  const { currentUser, addSublet, uploadPhoto } = useApp();
   const navigate = useNavigate();
 
   const [price, setPrice] = useState("");
-  const [location, setLocation] = useState("");
+  const [locationInputValue, setLocationInputValue] = useState("");
   const [distanceFromNEU, setDistanceFromNEU] = useState("");
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState<Date | undefined>();
@@ -42,11 +45,24 @@ const CreateSubletPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [noBrokersFee, setNoBrokersFee] = useState(false);
 
+  // New state for file handling
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (!currentUser) {
       navigate('/auth');
     }
   }, [currentUser, navigate]);
+
+  // Cleanup object URLs on unmount or when files change
+  useEffect(() => {
+    const previews = photoPreviews; // Capture current previews
+    return () => {
+      previews.forEach(URL.revokeObjectURL);
+    };
+  }, [photoFiles]); // Depend on photoFiles to trigger cleanup when files change
 
   // Calculate total cost based on price and date range
   const totalCost = useMemo(() => {
@@ -61,27 +77,116 @@ const CreateSubletPage = () => {
     return parseFloat(price) * months;
   }, [startDate, endDate, price]);
 
-  const handlePlaceSelect = (place: google.maps.places.PlaceResult) => {
-    if (place.formatted_address) {
-      setLocation(place.formatted_address);
+  // useCallback for handlePlaceSelect remains, but its role changes slightly
+  const handlePlaceSelect = useCallback((place: google.maps.places.PlaceResult | null, distanceInMiles: number | null) => {
+    if (place && place.formatted_address) {
+      // Refine the input value with the official formatted address
+      setLocationInputValue(place.formatted_address);
+
+      if (distanceInMiles !== null) {
+        const roundedDistance = distanceInMiles.toFixed(1);
+        setDistanceFromNEU(roundedDistance);
+        toast({
+          title: "Distance Calculated",
+          description: `Set distance to approx. ${roundedDistance} miles from NEU. You can adjust if needed.`,
+          variant: "default",
+        });
+      } else {
+        // If distance calculation failed for a valid place, set to "0" or "N/A"
+        setDistanceFromNEU("0");
+        toast({
+          title: "Distance Calculation Failed",
+          description: "Could not automatically calculate distance. Using 0 miles. Please adjust if needed.",
+          variant: "default",
+        });
+      }
     } else {
-      console.error("Selected place does not have a formatted address:", place);
+      // If place is null or invalid, also set distance to "0" or "N/A"
+      // Keep the potentially manually typed locationInputValue
+      setDistanceFromNEU("0");
+      if (place) { // Only toast error if place existed but was invalid
+        toast({
+          title: "Address Error",
+          description: "Could not get a valid address from the selection. The place object was incomplete.",
+          variant: "destructive",
+        });
+      }
+      // No toast if place was null (likely just cleared input)
+    }
+  }, [setLocationInputValue, setDistanceFromNEU]); // Dependencies remain the same
+
+  // Handle file selection
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files) return;
+
+    const newFiles: File[] = [];
+    const newPreviews: string[] = [];
+
+    const currentPhotoCount = photoFiles.length;
+    const remainingSlots = 5 - currentPhotoCount;
+    const filesToProcess = Array.from(files).slice(0, remainingSlots);
+
+    if (files.length > remainingSlots) {
       toast({
-        title: "Address Error",
-        description: "Could not get a valid address from the selection.",
+        title: "Too Many Photos",
+        description: `You can only add ${remainingSlots} more photo(s).`,
         variant: "destructive",
       });
-      setLocation("");
     }
+
+    filesToProcess.forEach(file => {
+      // Basic validation (e.g., type and size)
+      if (file.type.startsWith('image/')) { // Check if it's an image
+        if (photoFiles.length + newFiles.length < 5) {
+          newFiles.push(file);
+          newPreviews.push(URL.createObjectURL(file));
+        }
+      } else {
+        toast({
+          title: "Invalid File Type",
+          description: `File "${file.name}" is not a supported image type.`,
+          variant: "destructive",
+        });
+      }
+    });
+
+    setPhotoFiles(prev => [...prev, ...newFiles]);
+    setPhotoPreviews(prev => [...prev, ...newPreviews]);
+
+    // Clear the input value to allow selecting the same file again if needed
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  // Handle photo removal
+  const handleRemovePhoto = (indexToRemove: number) => {
+    // Revoke the object URL before removing the preview
+    URL.revokeObjectURL(photoPreviews[indexToRemove]);
+
+    setPhotoFiles(prev => prev.filter((_, index) => index !== indexToRemove));
+    setPhotoPreviews(prev => prev.filter((_, index) => index !== indexToRemove));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!location) {
+    // Add check for distance field being filled (either auto or manual)
+    if (!distanceFromNEU) {
+      toast({
+        title: "Missing Distance",
+        description: "Please enter or calculate the distance from Northeastern.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate using the input value state
+    if (!locationInputValue) {
       toast({
         title: "Missing Location",
-        description: "Please select a valid address.",
+        description: "Please enter or select a valid address.", // Updated message
         variant: "destructive",
       });
       return;
@@ -94,8 +199,7 @@ const CreateSubletPage = () => {
       });
       return;
     }
-
-    if (photos.length === 0) {
+    if (photoFiles.length === 0) {
       toast({
         title: "No Photos",
         description: "Please add at least one photo.",
@@ -107,14 +211,46 @@ const CreateSubletPage = () => {
     setIsSubmitting(true);
 
     try {
+      // Add user check
+      if (!currentUser) {
+        toast({ title: "Error", description: "User not logged in.", variant: "destructive" });
+        setIsSubmitting(false);
+        return;
+      }
+      // ... photo upload logic ...
+      const uploadedPhotoUrls: string[] = [];
+      for (const file of photoFiles) {
+        try {
+          const publicUrl = await uploadPhoto(file, currentUser.id);
+          if (publicUrl) {
+            uploadedPhotoUrls.push(publicUrl);
+          } else {
+            throw new Error(`Failed to upload ${file.name}.`);
+          }
+        } catch (uploadError) {
+          console.error("Error uploading photo:", uploadError);
+          toast({
+            title: "Photo Upload Error",
+            description: (uploadError as Error)?.message || `Failed to upload ${file.name}. Please try again.`,
+            variant: "destructive",
+          });
+          setIsSubmitting(false);
+          return;
+        }
+      }
+      // --- End Upload Photos ---
+
+      // Use locationInputValue for the submission
+      const distanceToSend = parseFloat(distanceFromNEU) || 0; // Default to 0 if parsing fails or it was "0"
+
       await addSublet({
         price: parseFloat(price),
-        location,
-        distanceFromNEU: parseFloat(distanceFromNEU),
+        location: locationInputValue, // Use the input value state
+        distanceFromNEU: distanceToSend, // Send the parsed number
         description,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
-        photos,
+        photos: uploadedPhotoUrls,
         genderPreference,
         pricingType,
         amenities,
@@ -131,25 +267,6 @@ const CreateSubletPage = () => {
       });
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleAddPhoto = () => {
-    const demoPhotos = [
-      "https://images.unsplash.com/photo-1649972904349-6e44c42644a7?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80",
-      "https://images.unsplash.com/photo-1721322800607-8c38375eef04?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
-    ];
-
-    if (photos.length < 5) {
-      const randomIndex = Math.floor(Math.random() * demoPhotos.length);
-      setPhotos([...photos, demoPhotos[randomIndex]]);
-    } else {
-      toast({
-        title: "Maximum Photos",
-        description: "You can only add up to 5 photos.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -171,30 +288,51 @@ const CreateSubletPage = () => {
 
       <div className="p-4">
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* ... photos, price ... */}
+          {/* Photos Div */}
           <div>
             <h2 className="text-lg font-bold mb-4">Photos (1-5)</h2>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              accept="image/*"
+              multiple
+              style={{ display: 'none' }}
+              id="photo-upload"
+            />
             <div className="grid grid-cols-3 gap-2">
-              {photos.map((photo, index) => (
-                <div key={index} className="relative aspect-square rounded overflow-hidden">
-                  <img src={photo} alt={`Sublet ${index}`} className="w-full h-full object-cover" />
+              {photoPreviews.map((previewUrl, index) => (
+                <div key={index} className="relative aspect-square rounded overflow-hidden group">
+                  <img src={previewUrl} alt={`Sublet Preview ${index}`} className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => handleRemovePhoto(index)}
+                    className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                    aria-label="Remove photo"
+                  >
+                    <X size={16} />
+                  </button>
                 </div>
               ))}
-
-              {photos.length < 5 && (
+              {photoFiles.length < 5 && (
                 <button
                   type="button"
-                  onClick={handleAddPhoto}
-                  className="aspect-square rounded border-2 border-dashed border-gray-300 flex items-center justify-center hover:border-neu-red"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="aspect-square rounded border-2 border-dashed border-gray-300 flex items-center justify-center hover:border-neu-red cursor-pointer"
                 >
                   <ImagePlus className="text-gray-400" />
                 </button>
               )}
             </div>
-            {photos.length === 0 && (
+            {photoFiles.length === 0 && (
               <p className="text-sm text-gray-500 mt-2">Add at least one photo (required)</p>
             )}
+            <p className="text-xs text-gray-500 mt-1">
+              {photoFiles.length}/5 photos added.
+            </p>
           </div>
-
+          {/* Price Div */}
           <div className="space-y-2">
             <label htmlFor="price" className="text-sm font-medium">
               Price ($/month)
@@ -215,10 +353,17 @@ const CreateSubletPage = () => {
             </label>
             <LocationAutocomplete
               onPlaceSelect={handlePlaceSelect}
-              initialValue={location}
+              inputValue={locationInputValue} // Pass state value
+              setInputValue={setLocationInputValue} // Pass state setter
+              destinationCoordinates={NEU_COORDINATES}
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Start typing and select an address from the suggestions.
+            </p>
           </div>
 
+          {/* ... distance, gender, etc. ... */}
+          {/* Distance Div */}
           <div className="space-y-2">
             <label htmlFor="distance" className="text-sm font-medium">
               Distance from Northeastern (miles)
@@ -228,7 +373,7 @@ const CreateSubletPage = () => {
               type="number"
               step="0.1"
               min="0"
-              placeholder="e.g., 0.5"
+              placeholder="e.g., 0.5 (auto-calculates)"
               value={distanceFromNEU}
               onChange={(e) => {
                 const value = e.target.value;
@@ -238,8 +383,9 @@ const CreateSubletPage = () => {
               }}
               required
             />
+            <p className="text-xs text-gray-500">Calculated automatically. Adjust if needed.</p>
           </div>
-
+          {/* Gender Preference Div */}
           <div className="space-y-2">
             <label htmlFor="genderPreference" className="text-sm font-medium">
               Gender Preference
@@ -258,7 +404,7 @@ const CreateSubletPage = () => {
               </SelectContent>
             </Select>
           </div>
-
+          {/* Pricing Type Div */}
           <div className="space-y-2">
             <label htmlFor="pricingType" className="text-sm font-medium">
               Pricing Type
@@ -276,7 +422,7 @@ const CreateSubletPage = () => {
               </SelectContent>
             </Select>
           </div>
-
+          {/* Broker's Fee Div */}
           <div className="flex items-center space-x-2">
             <Checkbox
               id="brokersFee"
@@ -290,7 +436,7 @@ const CreateSubletPage = () => {
               No Broker's Fee
             </label>
           </div>
-
+          {/* Amenities Div */}
           <div className="space-y-2">
             <label className="text-sm font-medium">
               Amenities
@@ -300,7 +446,7 @@ const CreateSubletPage = () => {
               onChange={setAmenities}
             />
           </div>
-
+          {/* Dates Div */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Start Date</label>
@@ -325,7 +471,6 @@ const CreateSubletPage = () => {
                 </PopoverContent>
               </Popover>
             </div>
-
             <div className="space-y-2">
               <label className="text-sm font-medium">End Date</label>
               <Popover>
@@ -350,7 +495,6 @@ const CreateSubletPage = () => {
               </Popover>
             </div>
           </div>
-
           {/* Total Cost Display */}
           {totalCost !== null && (
             <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
@@ -361,7 +505,7 @@ const CreateSubletPage = () => {
               </div>
             </div>
           )}
-
+          {/* Description Div */}
           <div className="space-y-2">
             <label htmlFor="description" className="text-sm font-medium">
               Description (max 200 characters)
@@ -379,7 +523,7 @@ const CreateSubletPage = () => {
               {description.length}/200
             </p>
           </div>
-
+          {/* Submit Button */}
           <Button
             type="submit"
             className="w-full bg-neu-red hover:bg-neu-red/90"

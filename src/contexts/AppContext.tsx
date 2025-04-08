@@ -31,6 +31,7 @@ type AppContextType = {
   updateSublet: (subletId: string, sublet: Partial<Omit<Sublet, "id" | "userId" | "userEmail" | "createdAt">>) => Promise<void>;
   sendMessage: (receiverId: string, text: string) => void;
   getMessagesForUser: (userId: string) => Message[];
+  uploadPhoto: (file: File, userId: string) => Promise<string | null>;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -392,6 +393,65 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const uploadPhoto = async (file: File, userId: string): Promise<string | null> => {
+    if (!file || !userId) {
+      console.error("UploadPhoto: File or userId missing");
+      return null;
+    }
+
+    // Create a unique file path, e.g., public/user_id/timestamp_filename.ext
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = `${userId}/${fileName}`; // Store under a folder named after the user ID
+
+    try {
+      // Upload file to the 'sublet-photos' bucket
+      const { error: uploadError } = await supabase.storage
+        .from('sublet-photos') // Use your bucket name here
+        .upload(filePath, file, {
+          cacheControl: '3600', // Optional: cache for 1 hour
+          upsert: false, // Optional: don't overwrite existing file with same name
+        });
+
+      if (uploadError) {
+        console.error('Error uploading photo:', uploadError);
+        toast({
+          title: "Upload Error",
+          description: `Failed to upload ${file.name}: ${uploadError.message}`,
+          variant: "destructive",
+        });
+        return null;
+      }
+
+      // Get the public URL of the uploaded file
+      const { data } = supabase.storage
+        .from('sublet-photos') // Use your bucket name here
+        .getPublicUrl(filePath);
+
+      if (!data?.publicUrl) {
+        console.error('Error getting public URL for:', filePath);
+        toast({
+          title: "Upload Error",
+          description: `Could not get public URL for ${file.name}.`,
+          variant: "destructive",
+        });
+        return null;
+      }
+
+      console.log('Successfully uploaded:', data.publicUrl);
+      return data.publicUrl;
+
+    } catch (error: any) {
+      console.error('Error in uploadPhoto function:', error);
+      toast({
+        title: "Upload Failed",
+        description: error.message || `An unexpected error occurred uploading ${file.name}.`,
+        variant: "destructive",
+      });
+      return null;
+    }
+  };
+
   const value = {
     currentUser,
     supabaseUser,
@@ -418,6 +478,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     updateSublet,
     sendMessage,
     getMessagesForUser,
+    uploadPhoto,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
