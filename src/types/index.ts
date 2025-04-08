@@ -19,7 +19,7 @@ export interface Sublet {
   createdAt: string;
   genderPreference: "male" | "female" | "any";
   pricingType: "firm" | "negotiable";
-  amenities?: string[]; 
+  amenities?: string[];
   noBrokersFee?: boolean;
 }
 

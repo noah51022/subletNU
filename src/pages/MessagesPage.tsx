@@ -12,17 +12,17 @@ const MessagesPage = () => {
   const { currentUser, sublets, messages, sendMessage, getMessagesForUser } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   const [newMessage, setNewMessage] = useState("");
   const [activeUser, setActiveUser] = useState<string | null>(userId || null);
-  
+
   const subletId = location.state?.subletId;
-  
+
   const getUniqueContacts = () => {
     if (!currentUser) return [];
-    
+
     const uniqueContactIds = new Set<string>();
-    
+
     messages.forEach(msg => {
       if (msg.senderId === currentUser.id) {
         uniqueContactIds.add(msg.receiverId);
@@ -30,7 +30,7 @@ const MessagesPage = () => {
         uniqueContactIds.add(msg.senderId);
       }
     });
-    
+
     return Array.from(uniqueContactIds).map(id => {
       const user = mockUsers.find(u => u.id === id);
       return {
@@ -39,15 +39,15 @@ const MessagesPage = () => {
       };
     });
   };
-  
+
   const contacts = getUniqueContacts();
   const activeUserEmail = mockUsers.find(u => u.id === activeUser)?.email || "Unknown User";
   const activeUserMessages = activeUser ? getMessagesForUser(activeUser) : [];
-  
-  const activeUserSublet = activeUser 
-    ? sublets.find(s => s.userId === activeUser) 
+
+  const activeUserSublet = activeUser
+    ? sublets.find(s => s.userId === activeUser)
     : null;
-  
+
   useEffect(() => {
     if (!currentUser) {
       navigate('/auth');
@@ -56,9 +56,9 @@ const MessagesPage = () => {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!activeUser || !newMessage.trim()) return;
-    
+
     sendMessage(activeUser, newMessage);
     setNewMessage("");
   };
@@ -79,7 +79,7 @@ const MessagesPage = () => {
         <header className="bg-neu-red text-white p-4">
           <h1 className="text-xl font-bold">Messages</h1>
         </header>
-        
+
         <div className="p-4">
           {contacts.length === 0 ? (
             <div className="text-center py-8">
@@ -108,7 +108,7 @@ const MessagesPage = () => {
             </div>
           )}
         </div>
-        
+
         <BottomNav />
       </div>
     );
@@ -117,10 +117,10 @@ const MessagesPage = () => {
   return (
     <div className="pb-20 h-screen flex flex-col max-w-2xl mx-auto">
       <header className="bg-neu-red text-white p-4 flex items-center">
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="text-white hover:bg-neu-red/80" 
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-white hover:bg-neu-red/80"
           onClick={handleBackClick}
         >
           <ArrowLeft />
@@ -134,7 +134,7 @@ const MessagesPage = () => {
           )}
         </div>
       </header>
-      
+
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {activeUserMessages.length === 0 ? (
           <div className="text-center py-8">
@@ -145,24 +145,23 @@ const MessagesPage = () => {
           activeUserMessages.map(msg => (
             <div
               key={msg.id}
-              className={`max-w-[75%] p-3 rounded-lg ${
-                msg.senderId === currentUser.id
+              className={`max-w-[75%] p-3 rounded-lg ${msg.senderId === currentUser.id
                   ? "bg-neu-red text-white ml-auto"
                   : "bg-gray-200 text-black"
-              }`}
+                }`}
             >
               <p>{msg.text}</p>
               <p className="text-xs opacity-70 mt-1">
-                {new Date(msg.timestamp).toLocaleTimeString([], { 
-                  hour: "2-digit", 
-                  minute: "2-digit" 
+                {new Date(msg.timestamp).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit"
                 })}
               </p>
             </div>
           ))
         )}
       </div>
-      
+
       <div className="p-3 border-t bg-white">
         <form onSubmit={handleSendMessage} className="flex gap-2">
           <Input
@@ -171,8 +170,8 @@ const MessagesPage = () => {
             onChange={(e) => setNewMessage(e.target.value)}
             className="flex-1"
           />
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             size="icon"
             disabled={!newMessage.trim()}
             className="bg-neu-red hover:bg-neu-red/90"
@@ -181,7 +180,7 @@ const MessagesPage = () => {
           </Button>
         </form>
       </div>
-      
+
       <BottomNav />
     </div>
   );

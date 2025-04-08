@@ -1,8 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { Sublet, User, Message } from "../types";
-import { mockMessages } from "../services/mockData";
 import { supabase } from "@/integrations/supabase/client";
-import { User as SupabaseUser, Session } from "@supabase/supabase-js";
+import { User as SupabaseUser, Session, RealtimeChannel } from "@supabase/supabase-js";
 import { toast } from "@/hooks/use-toast";
 
 type AppContextType = {
@@ -11,6 +10,7 @@ type AppContextType = {
   session: Session | null;
   isLoadingAuth: boolean;
   isLoadingSublets: boolean;
+  isLoadingMessages: boolean;
   sublets: Sublet[];
   messages: Message[];
   filteredSublets: Sublet[];
@@ -45,7 +45,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [sublets, setSublets] = useState<Sublet[]>([]);
   const [isLoadingSublets, setIsLoadingSublets] = useState(true);
-  const [messages, setMessages] = useState<Message[]>(mockMessages);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(true);
 
   const [maxPrice, setMaxPrice] = useState<number>(1000);
   const [maxDistance, setMaxDistance] = useState<number>(5);
@@ -169,16 +170,165 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       .channel('public:sublets')
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'sublets' },
-        () => {
+        (payload) => {
           fetchSublets();
         }
       )
-      .subscribe();
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+        }
+        if (status === 'CHANNEL_ERROR') {
+          console.error('Subscription channel error:', err);
+        }
+        if (status === 'TIMED_OUT') {
+          console.error('Subscription timed out');
+        }
+        if (status === 'CLOSED') {
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isLoadingAuth, currentUser]);
+  }, []);
+
+  const fetchMessages = async () => {
+    if (!currentUser) {
+      setMessages([]);
+      setIsLoadingMessages(false);
+      return;
+    }
+
+    setIsLoadingMessages(true);
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching messages:', error);
+        toast({
+          title: "Error",
+          description: "Could not fetch messages.",
+          variant: "destructive",
+        });
+        setMessages([]);
+        return;
+      }
+
+      if (data) {
+        const mappedMessages: Message[] = data.map((msg) => ({
+          id: msg.id,
+          senderId: msg.sender_id,
+          receiverId: msg.receiver_id,
+          text: msg.text,
+          timestamp: msg.created_at,
+        }));
+        setMessages(mappedMessages);
+      } else {
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch messages:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while fetching messages.",
+        variant: "destructive",
+      });
+      setMessages([]);
+    } finally {
+      setIsLoadingMessages(false);
+    }
+  };
+
+  useEffect(() => {
+    let messageChannel: RealtimeChannel | null = null;
+
+    const setupMessages = async () => {
+      // Fetch initial messages
+      await fetchMessages();
+
+      // Set up realtime subscription if user is logged in
+      if (currentUser) {
+        messageChannel = supabase
+          .channel(`realtime:messages:${currentUser.id}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'messages',
+              // Filter on the server-side for messages involving the current user
+              filter: `sender_id=eq.${currentUser.id}`,
+            },
+            (payload) => {
+              // Handle new message where current user is the sender
+              console.log('New message from current user:', payload);
+              const newMessage = payload.new as any; // Cast necessary because default types might not include all columns
+              const mappedMessage: Message = {
+                id: newMessage.id,
+                senderId: newMessage.sender_id,
+                receiverId: newMessage.receiver_id,
+                text: newMessage.text,
+                timestamp: newMessage.created_at,
+              };
+              // Add to state, preventing duplicates just in case
+              setMessages((prev) =>
+                prev.find((m) => m.id === mappedMessage.id) ? prev : [...prev, mappedMessage]
+              );
+            }
+          )
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'messages',
+              // Filter on the server-side for messages received by the current user
+              filter: `receiver_id=eq.${currentUser.id}`,
+            },
+            (payload) => {
+              // Handle new message where current user is the receiver
+              console.log('New message for current user:', payload);
+              const newMessage = payload.new as any;
+              const mappedMessage: Message = {
+                id: newMessage.id,
+                senderId: newMessage.sender_id,
+                receiverId: newMessage.receiver_id,
+                text: newMessage.text,
+                timestamp: newMessage.created_at,
+              };
+              setMessages((prev) =>
+                prev.find((m) => m.id === mappedMessage.id) ? prev : [...prev, mappedMessage]
+              );
+            }
+          )
+          .subscribe((status, err) => {
+            if (status === 'SUBSCRIBED') {
+              console.log('Subscribed to messages channel for user:', currentUser.id);
+            } else if (status === 'CHANNEL_ERROR') {
+              console.error('Messages channel error:', err);
+              toast({ title: "Realtime Error", description: "Could not connect to live message updates.", variant: "destructive" });
+            } else if (status === 'TIMED_OUT') {
+              console.warn('Messages channel timed out');
+            }
+          });
+      }
+    };
+
+    setupMessages();
+
+    // Cleanup function
+    return () => {
+      if (messageChannel) {
+        console.log('Unsubscribing from messages channel');
+        supabase.removeChannel(messageChannel);
+        messageChannel = null;
+      }
+    };
+  }, [currentUser]); // Re-run when user logs in/out
 
   const filteredSublets = sublets.filter((sublet) => {
     const priceFilter = sublet.price <= maxPrice;
@@ -395,18 +545,58 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const sendMessage = (receiverId: string, text: string) => {
-    if (!currentUser) return;
+  const sendMessage = async (receiverId: string, text: string) => {
+    if (!currentUser) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to send messages.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!text.trim()) {
+      // Don't send empty messages
+      return;
+    }
 
-    const newMessage: Message = {
-      id: `msg${messages.length + 1}`,
-      senderId: currentUser.id,
-      receiverId,
-      text,
-      timestamp: new Date().toISOString(),
-    };
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          sender_id: currentUser.id,
+          receiver_id: receiverId,
+          text: text.trim(),
+          // id and created_at are usually handled by Supabase defaults
+        });
 
-    setMessages([...messages, newMessage]);
+      if (error) {
+        console.error("Error sending message:", error);
+        toast({
+          title: "Error",
+          description: "Failed to send message.",
+          variant: "destructive",
+        });
+        throw error; // Re-throw the error if needed elsewhere
+      }
+
+      // Message sent successfully
+      // console.log("Message sent successfully via Supabase");
+      // No need to update local state or refetch manually anymore
+      // setMessages((prev) => [...prev, newMessage]); // REMOVED
+      // fetchMessages(); // REMOVED
+
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      // Toast might already be shown if error came from Supabase client call
+      // Ensure a toast is shown if the error is different
+      if (!(error instanceof Error && (error as any).details)) { // Check if it's likely a Supabase error already handled
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred while sending the message.",
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   const getMessagesForUser = (userId: string): Message[] => {
@@ -486,6 +676,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     session,
     isLoadingAuth,
     isLoadingSublets,
+    isLoadingMessages,
     sublets,
     messages,
     filteredSublets,

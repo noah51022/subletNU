@@ -346,6 +346,7 @@ const CreateSubletPage = () => {
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               required
+              max="6000"
             />
           </div>
 

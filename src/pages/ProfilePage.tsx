@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "@/contexts/AppContext";
@@ -10,7 +9,6 @@ import { LogOut, Loader2, User } from "lucide-react";
 import { Sublet } from "../types";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const ProfilePage = () => {
   const { currentUser, logout } = useApp();
@@ -18,7 +16,7 @@ const ProfilePage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<{ first_name: string | null, last_name: string | null } | null>(null);
   const navigate = useNavigate();
-  
+
   useEffect(() => {
     if (!currentUser) {
       navigate('/auth');
@@ -30,19 +28,19 @@ const ProfilePage = () => {
 
   const fetchUserProfile = async () => {
     if (!currentUser) return;
-    
+
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('first_name, last_name')
         .eq('id', currentUser.id)
         .single();
-        
+
       if (error) {
         console.error('Error fetching user profile:', error);
         return;
       }
-      
+
       if (data) {
         setUserProfile(data);
       }
@@ -53,7 +51,7 @@ const ProfilePage = () => {
 
   const fetchMyListings = async () => {
     if (!currentUser) return;
-    
+
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -104,13 +102,13 @@ const ProfilePage = () => {
     if (!window.confirm("Are you sure you want to delete this listing?")) {
       return;
     }
-    
+
     try {
       const { error } = await supabase
         .from('sublets')
         .delete()
         .eq('id', subletId);
-        
+
       if (error) {
         console.error('Error deleting listing:', error);
         toast({
@@ -120,10 +118,10 @@ const ProfilePage = () => {
         });
         return;
       }
-      
+
       // Update local state
       setMyListings(myListings.filter(listing => listing.id !== subletId));
-      
+
       toast({
         title: "Success",
         description: "Listing deleted successfully",
@@ -161,45 +159,45 @@ const ProfilePage = () => {
     <div className="pb-20 max-w-2xl mx-auto">
       <header className="bg-neu-red text-white p-4 flex justify-between items-center">
         <h1 className="text-xl font-bold">Profile</h1>
-        <Button 
-          variant="ghost" 
-          onClick={handleLogout} 
+        <Button
+          variant="ghost"
+          onClick={handleLogout}
           className="text-white hover:bg-red-800"
         >
           <LogOut size={18} className="mr-2" />
           Log out
         </Button>
       </header>
-      
+
       <div className="p-4">
         <div className="mb-6 flex items-center">
-          <Avatar className="h-16 w-16 mr-4 bg-neu-red text-white">
-            <AvatarFallback>{getInitials()}</AvatarFallback>
-          </Avatar>
+          <div className="h-16 w-16 mr-4 flex items-center justify-center bg-gray-200 rounded-full">
+            <span className="text-xl font-semibold text-gray-600">{getInitials()}</span>
+          </div>
           <div>
             <h2 className="text-lg font-semibold">{getDisplayName()}</h2>
             <p className="text-gray-600">{currentUser.email}</p>
           </div>
         </div>
-        
+
         <Tabs defaultValue="listings" className="w-full">
           <TabsList className="w-full mb-4">
             <TabsTrigger value="listings" className="flex-1">My Listings</TabsTrigger>
             <TabsTrigger value="settings" className="flex-1">Account Settings</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="listings">
             <div className="my-4">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-lg font-medium">Your Sublet Listings</h3>
-                <Button 
+                <Button
                   onClick={() => navigate('/create')}
                   className="bg-neu-red hover:bg-red-800"
                 >
                   Create New Listing
                 </Button>
               </div>
-              
+
               {isLoading ? (
                 <div className="flex justify-center items-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-neu-red" />
@@ -207,7 +205,7 @@ const ProfilePage = () => {
               ) : myListings.length === 0 ? (
                 <div className="text-center py-8 bg-gray-50 rounded-lg">
                   <p className="text-gray-500">You haven't posted any listings yet.</p>
-                  <Button 
+                  <Button
                     onClick={() => navigate('/create')}
                     className="mt-4 bg-neu-red hover:bg-red-800"
                   >
@@ -217,9 +215,9 @@ const ProfilePage = () => {
               ) : (
                 <div>
                   {myListings.map((listing) => (
-                    <ProfileListingCard 
-                      key={listing.id} 
-                      sublet={listing} 
+                    <ProfileListingCard
+                      key={listing.id}
+                      sublet={listing}
                       onDelete={handleDeleteListing}
                     />
                   ))}
@@ -227,7 +225,7 @@ const ProfilePage = () => {
               )}
             </div>
           </TabsContent>
-          
+
           <TabsContent value="settings">
             <div className="space-y-4">
               <div className="p-4 border rounded-lg">
@@ -247,21 +245,21 @@ const ProfilePage = () => {
                   <p className="text-sm">{currentUser.email}</p>
                 </div>
               </div>
-              
+
               <div className="p-4 border rounded-lg">
                 <h3 className="font-medium mb-2">Email Verification</h3>
                 <p className="text-xs text-gray-500 mb-2">
-                  {currentUser.verified ? 
-                    "Your email has been verified." : 
+                  {currentUser.verified ?
+                    "Your email has been verified." :
                     "Please check your inbox to verify your email address."
                   }
                 </p>
               </div>
-              
+
               <div className="p-4 border rounded-lg">
                 <h3 className="font-medium mb-2">Account Actions</h3>
-                <Button 
-                  variant="destructive" 
+                <Button
+                  variant="destructive"
                   onClick={handleLogout}
                 >
                   <LogOut size={16} className="mr-2" />
@@ -272,7 +270,7 @@ const ProfilePage = () => {
           </TabsContent>
         </Tabs>
       </div>
-      
+
       <BottomNav />
     </div>
   );

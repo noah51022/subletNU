@@ -98,7 +98,7 @@ const FilterBar = () => {
             <label className="text-sm font-medium">Max Price: ${maxPrice}</label>
             <Slider
               defaultValue={[maxPrice]}
-              max={1500}
+              max={6000}
               min={300}
               step={50}
               onValueChange={handleMaxPriceChange}
