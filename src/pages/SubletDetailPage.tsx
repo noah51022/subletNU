@@ -4,11 +4,17 @@ import { useSublet } from "@/contexts/SubletContext";
 import SubletCard from "@/components/SubletCard";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Wifi, Dumbbell, Shield, Check, Share2, Loader2 } from "lucide-react";
+import { ArrowLeft, Wifi, Dumbbell, Shield, Check, Loader2, Share, Link, ImageDown } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import * as htmlToImage from 'html-to-image';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const SubletDetailPage = () => {
   const { subletId } = useParams<{ subletId: string }>();
@@ -17,7 +23,7 @@ const SubletDetailPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const shareableContentRef = useRef<HTMLDivElement>(null);
-  const [isSharing, setIsSharing] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const sublet = !isLoadingSublets ? sublets.find(s => s.id === subletId) : undefined;
 
@@ -27,21 +33,42 @@ const SubletDetailPage = () => {
     }
   }, [currentUser, isLoadingAuth, navigate]);
 
-  // Function to handle sharing the sublet card as an image
-  const handleShare = async () => {
+  // Function to copy the listing link
+  const handleShareLink = async () => {
+    setIsProcessing(true);
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast({
+        title: "Link Copied!",
+        description: "The listing link has been copied to your clipboard.",
+      });
+    } catch (err) {
+      console.error("Failed to copy link: ", err);
+      toast({
+        title: "Error Copying Link",
+        description: "Could not copy the link to your clipboard.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Function to handle saving the sublet card as an image
+  const handleSaveImage = async () => {
     if (!shareableContentRef.current) {
       toast({
         title: "Error",
-        description: "Could not find the content to share.",
+        description: "Could not find the content to generate image.",
         variant: "destructive",
       });
       return;
     }
 
-    setIsSharing(true);
+    setIsProcessing(true);
     toast({
       title: "Generating Image...",
-      description: "Please wait while the shareable image is created.",
+      description: "Please wait while the image is created.",
     });
 
     try {
@@ -50,49 +77,26 @@ const SubletDetailPage = () => {
         backgroundColor: '#ffffff',
       });
 
-      // Convert data URL to Blob
-      const response = await fetch(dataUrl);
-      const blob = await response.blob();
+      // Trigger download instead of sharing
+      const link = document.createElement('a');
+      link.download = `sublet-${sublet?.id || 'listing'}.png`;
+      link.href = dataUrl;
+      link.click();
 
-      // Create a file from the blob
-      const file = new File([blob], `sublet-${sublet?.id || 'listing'}.png`, { type: blob.type });
-
-      // Check if navigator.share and canShare are available
-      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: `Check out this sublet! - ${sublet?.location || ''}`,
-          text: `Found this sublet listing: ${sublet?.price}/mo from ${sublet?.startDate} to ${sublet?.endDate}.`,
-          // url: window.location.href, // Optionally share the URL too
-        });
-        toast({
-          title: "Shared Successfully!",
-          description: "The sublet image was shared.",
-        });
-      } else {
-        // Fallback: Copy link or prompt download (could implement download here)
-        console.log("Web Share API not supported or cannot share files. Data URL:", dataUrl);
-        await navigator.clipboard.writeText(window.location.href); // Copy link as fallback
-        toast({
-          title: "Share via Image Not Supported",
-          description: "The listing link has been copied to your clipboard instead.",
-        });
-      }
-    } catch (err) {
-      console.error("Failed to generate or share image: ", err);
       toast({
-        title: "Error Sharing Image",
-        description: "Could not generate or share the image. The link was copied instead.",
+        title: "Image Saved!",
+        description: "The sublet image has been downloaded.",
+      });
+
+    } catch (err) {
+      console.error("Failed to generate or save image: ", err);
+      toast({
+        title: "Error Saving Image",
+        description: "Could not generate or save the image.",
         variant: "destructive",
       });
-      // Fallback to copying link on error
-      try {
-        await navigator.clipboard.writeText(window.location.href);
-      } catch (copyError) {
-        console.error("Failed to copy link as fallback: ", copyError);
-      }
     } finally {
-      setIsSharing(false);
+      setIsProcessing(false);
     }
   };
 
@@ -147,15 +151,34 @@ const SubletDetailPage = () => {
           </Button>
           <h1 className="text-xl font-bold ml-2">Sublet Details</h1>
         </div>
-        <Button
-          disabled={isSharing}
-          variant="ghost"
-          size="icon"
-          className="text-white hover:bg-neu-red/80 disabled:opacity-50"
-          onClick={handleShare}
-        >
-          {isSharing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Share2 />}
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              disabled={isProcessing}
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-neu-red/80 disabled:opacity-50"
+            >
+              {isProcessing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Share />}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              className="flex items-center gap-2 cursor-pointer"
+              onSelect={handleShareLink}
+            >
+              <Link className="h-4 w-4" />
+              <span>Share Link</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="flex items-center gap-2 cursor-pointer"
+              onSelect={handleSaveImage}
+            >
+              <ImageDown className="h-4 w-4" />
+              <span>Save as Image</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </header>
 
       <div className="p-4" ref={shareableContentRef}>
