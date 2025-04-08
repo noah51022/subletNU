@@ -265,8 +265,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             },
             (payload) => {
               // Handle new message where current user is the sender
-              console.log('New message from current user:', payload);
-              const newMessage = payload.new as any; // Cast necessary because default types might not include all columns
+              const newMessage = payload.new as any;
               const mappedMessage: Message = {
                 id: newMessage.id,
                 senderId: newMessage.sender_id,
@@ -274,7 +273,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                 text: newMessage.text,
                 timestamp: newMessage.created_at,
               };
-              // Add to state, preventing duplicates just in case
               setMessages((prev) =>
                 prev.find((m) => m.id === mappedMessage.id) ? prev : [...prev, mappedMessage]
               );
@@ -291,7 +289,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             },
             (payload) => {
               // Handle new message where current user is the receiver
-              console.log('New message for current user:', payload);
               const newMessage = payload.new as any;
               const mappedMessage: Message = {
                 id: newMessage.id,
@@ -307,7 +304,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           )
           .subscribe((status, err) => {
             if (status === 'SUBSCRIBED') {
-              console.log('Subscribed to messages channel for user:', currentUser.id);
             } else if (status === 'CHANNEL_ERROR') {
               console.error('Messages channel error:', err);
               toast({ title: "Realtime Error", description: "Could not connect to live message updates.", variant: "destructive" });
@@ -323,7 +319,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     // Cleanup function
     return () => {
       if (messageChannel) {
-        console.log('Unsubscribing from messages channel');
         supabase.removeChannel(messageChannel);
         messageChannel = null;
       }
