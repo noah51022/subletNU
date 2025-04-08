@@ -9,6 +9,8 @@ type AppContextType = {
   currentUser: User | null;
   supabaseUser: SupabaseUser | null;
   session: Session | null;
+  isLoadingAuth: boolean;
+  isLoadingSublets: boolean;
   sublets: Sublet[];
   messages: Message[];
   filteredSublets: Sublet[];
@@ -40,7 +42,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [sublets, setSublets] = useState<Sublet[]>([]);
+  const [isLoadingSublets, setIsLoadingSublets] = useState(true);
   const [messages, setMessages] = useState<Message[]>(mockMessages);
 
   const [maxPrice, setMaxPrice] = useState<number>(1000);
@@ -54,11 +58,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [amenitiesFilter, setAmenitiesFilter] = useState<string[]>([]);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+    let isMounted = true;
+    setIsLoadingAuth(true);
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (isMounted) {
         setSession(session);
         setSupabaseUser(session?.user ?? null);
-
         if (session?.user) {
           const appUser: User = {
             id: session.user.id,
@@ -69,27 +75,41 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         } else {
           setCurrentUser(null);
         }
+        setIsLoadingAuth(false);
+      }
+    }).catch(() => {
+      if (isMounted) setIsLoadingAuth(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (isMounted) {
+          setSession(session);
+          const user = session?.user ?? null;
+          setSupabaseUser(user);
+
+          if (user) {
+            const appUser: User = {
+              id: user.id,
+              email: user.email || "",
+              verified: user.email_confirmed_at !== null
+            };
+            setCurrentUser(appUser);
+          } else {
+            setCurrentUser(null);
+          }
+        }
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setSupabaseUser(session?.user ?? null);
-
-      if (session?.user) {
-        const appUser: User = {
-          id: session.user.id,
-          email: session.user.email || "",
-          verified: session.user.email_confirmed_at !== null
-        };
-        setCurrentUser(appUser);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const fetchSublets = async () => {
+    setIsLoadingSublets(true);
     try {
       const { data, error } = await supabase
         .from('sublets')
@@ -98,6 +118,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) {
         console.error('Error fetching sublets:', error);
+        setSublets([]);
         return;
       }
 
@@ -129,11 +150,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             };
           })
         );
-
         setSublets(subletsWithEmails);
+      } else {
+        setSublets([]);
       }
     } catch (error) {
       console.error('Failed to fetch sublets:', error);
+      setSublets([]);
+    } finally {
+      setIsLoadingSublets(false);
     }
   };
 
@@ -153,7 +178,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUser]);
+  }, [isLoadingAuth, currentUser]);
 
   const filteredSublets = sublets.filter((sublet) => {
     const priceFilter = sublet.price <= maxPrice;
@@ -352,17 +377,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           description: error.message || "Failed to update your sublet",
           variant: "destructive",
         });
-        throw error;
+        if (error instanceof Error) {
+          throw error;
+        } else {
+          throw error;
+        }
+      } else {
+        fetchSublets();
+        toast({
+          title: "Sublet Updated",
+          description: "Your sublet has been updated successfully.",
+        });
       }
-
-      fetchSublets();
-
-      toast({
-        title: "Sublet Updated",
-        description: "Your sublet has been updated successfully.",
-      });
-    } catch (error) {
-      console.error("Error updating sublet:", error);
+    } catch (error: any) {
+      console.error("Error updating sublet in context:", error);
       throw error;
     }
   };
@@ -456,6 +484,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     currentUser,
     supabaseUser,
     session,
+    isLoadingAuth,
+    isLoadingSublets,
     sublets,
     messages,
     filteredSublets,
