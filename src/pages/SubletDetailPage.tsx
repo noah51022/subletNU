@@ -264,17 +264,18 @@ const SubletDetailPage = () => {
         {/* Add Social Media Handles Section */}
         {(sublet.instagramHandle || sublet.snapchatHandle) && (
           <div className="mt-6 bg-white rounded-lg shadow p-4">
-            <h2 className="text-lg font-bold mb-3">Contact via Social Media</h2>
-            <div className="flex flex-wrap gap-2">
+            <h2 className="text-lg font-bold mb-1">Contact via Social Media</h2>
+            <p className="text-sm text-gray-500 mb-3">Tap to connect on social media</p>
+            <div className="flex flex-wrap gap-3">
               {sublet.instagramHandle && (
                 <a
                   href={`https://www.instagram.com/${sublet.instagramHandle}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500 text-white font-medium px-3 py-1 rounded-md text-sm hover:opacity-90 transition-opacity"
+                  className="flex items-center space-x-2 bg-gradient-to-r from-pink-500 to-orange-400 text-white px-4 py-2 rounded-full hover:opacity-90 transition-all transform hover:scale-105 shadow-md"
                 >
-                  {/* You might want to add an Instagram icon here */}
-                  @{sublet.instagramHandle}
+                  <img src="/images/icons8-instagram.svg" alt="Instagram" className="w-5 h-5 filter invert" />
+                  <span className="font-medium">@{sublet.instagramHandle}</span>
                 </a>
               )}
               {sublet.snapchatHandle && (
@@ -282,10 +283,10 @@ const SubletDetailPage = () => {
                   href={`https://www.snapchat.com/add/${sublet.snapchatHandle}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center bg-yellow-300 text-black font-medium px-3 py-1 rounded-md text-sm hover:opacity-90 transition-opacity"
+                  className="flex items-center space-x-2 bg-yellow-300 text-black px-4 py-2 rounded-full hover:opacity-90 transition-all transform hover:scale-105 shadow-md"
                 >
-                  {/* You might want to add a Snapchat icon here */}
-                  @{sublet.snapchatHandle}
+                  <img src="/images/icons8-snapchat.svg" alt="Snapchat" className="w-5 h-5" />
+                  <span className="font-medium">@{sublet.snapchatHandle}</span>
                 </a>
               )}
             </div>

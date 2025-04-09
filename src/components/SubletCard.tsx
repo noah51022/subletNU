@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Sublet } from "../types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
+import { ChevronLeft, ChevronRight, MessageSquare, ChevronDown, ChevronUp } from "lucide-react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +25,7 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false); // State for lightbox
   const [aspectRatioClass, setAspectRatioClass] = useState('aspect-video'); // Default to landscape
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -151,6 +152,42 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
   // Prepare slides for the lightbox
   const lightboxSlides = sublet.photos.map(photoUrl => ({ src: photoUrl }));
 
+  // Add function to format description with line breaks
+  const formatDescription = (text: string) => {
+    return text.split('\n').map((line, i) => (
+      <span key={i}>
+        {line}
+        {i < text.split('\n').length - 1 && <br />}
+      </span>
+    ));
+  };
+
+  // Add function to check if description needs expansion
+  const shouldShowExpandButton = () => {
+    return !expanded && (
+      sublet.description.length > 150 ||
+      sublet.description.split('\n').length > 2
+    );
+  };
+
+  // Add function to get truncated description
+  const getTruncatedDescription = () => {
+    if (isDescriptionExpanded) {
+      return formatDescription(sublet.description);
+    }
+
+    const lines = sublet.description.split('\n');
+    if (lines.length > 2) {
+      return formatDescription(lines.slice(0, 2).join('\n') + '...');
+    }
+
+    if (sublet.description.length > 150) {
+      return formatDescription(sublet.description.slice(0, 150) + '...');
+    }
+
+    return formatDescription(sublet.description);
+  };
+
   // Define the content to be rendered
   const cardContent = (
     <>
@@ -206,7 +243,26 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
             <div className="text-sm text-gray-600 mb-2">
               {getShortAddress(sublet.location)} • {sublet.distanceFromNEU} mi from NU • {formatDateRange()}
             </div>
-            <p className="mt-2 text-gray-800 text-sm">{sublet.description}</p>
+            <div className="mt-2 text-gray-800 text-sm">
+              {expanded ? formatDescription(sublet.description) : getTruncatedDescription()}
+              {!expanded && shouldShowExpandButton() && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-1 h-6 text-neu-red hover:text-neu-red/90 p-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsDescriptionExpanded(!isDescriptionExpanded);
+                  }}
+                >
+                  {isDescriptionExpanded ? (
+                    <>Show less <ChevronUp className="h-4 w-4 ml-1" /></>
+                  ) : (
+                    <>Show more <ChevronDown className="h-4 w-4 ml-1" /></>
+                  )}
+                </Button>
+              )}
+            </div>
 
             {/* Display amenity badges */}
             {getAmenityBadges()}
@@ -214,22 +270,37 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
         </div>
 
         <div className="mt-4 flex justify-between items-center">
-          <div className="text-xs text-gray-500 flex items-center space-x-2">
-            {/* Conditionally render social handles or email */}
-            {sublet.instagramHandle ? (
-              <span className="flex items-center">
-                {/* Update IMG tag src */}
-                <img src="/images/icons8-instagram.svg" alt="Instagram" className="w-4 h-4 mr-1" />
-                @{sublet.instagramHandle}
-              </span>
-            ) : sublet.snapchatHandle ? (
-              <span className="flex items-center">
-                {/* Update IMG tag src */}
-                <img src="/images/icons8-snapchat.svg" alt="Snapchat" className="w-4 h-4 mr-1" />
-                @{sublet.snapchatHandle}
-              </span>
+          <div className="text-sm text-gray-600">
+            {/* Social Media Links */}
+            {(sublet.instagramHandle || sublet.snapchatHandle) ? (
+              <div className="flex items-center space-x-4">
+                {sublet.instagramHandle && (
+                  <a
+                    href={`https://instagram.com/${sublet.instagramHandle}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center space-x-2 hover:opacity-70 transition-opacity"
+                  >
+                    <img src="/images/icons8-instagram.svg" alt="Instagram" className="w-5 h-5" />
+                    <span className="text-gray-500">@{sublet.instagramHandle}</span>
+                  </a>
+                )}
+                {sublet.snapchatHandle && (
+                  <a
+                    href={`https://snapchat.com/add/${sublet.snapchatHandle}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="flex items-center space-x-2 hover:opacity-70 transition-opacity"
+                  >
+                    <img src="/images/icons8-snapchat.svg" alt="Snapchat" className="w-5 h-5" />
+                    <span className="text-gray-500">@{sublet.snapchatHandle}</span>
+                  </a>
+                )}
+              </div>
             ) : (
-              <span>Posted by: {sublet.userEmail}</span>
+              <span className="text-gray-500">Posted by: {sublet.userEmail}</span>
             )}
           </div>
 

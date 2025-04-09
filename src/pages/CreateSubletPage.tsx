@@ -519,19 +519,19 @@ const CreateSubletPage = () => {
           {/* Description Div */}
           <div className="space-y-2">
             <label htmlFor="description" className="text-sm font-medium">
-              Description (max 200 characters)
+              Description (max 600 characters)
             </label>
             <Textarea
               id="description"
               placeholder="Describe your sublet..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              maxLength={200}
-              rows={3}
+              maxLength={600}
+              rows={4}
               required
             />
             <p className="text-xs text-gray-500 text-right">
-              {description.length}/200
+              {description.length}/600
             </p>
           </div>
           {/* Add Social Media Inputs */}
