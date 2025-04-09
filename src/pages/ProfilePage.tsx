@@ -5,7 +5,7 @@ import BottomNav from "@/components/BottomNav";
 import ProfileListingCard from "@/components/ProfileListingCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { LogOut, Loader2, User } from "lucide-react";
+import { LogOut, Loader2, User, Trash2 } from "lucide-react";
 import { Sublet } from "../types";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -142,6 +142,52 @@ const ProfilePage = () => {
     navigate('/auth');
   };
 
+  const handleDeleteAccount = async () => {
+    if (!window.confirm("Are you sure you want to delete your account? This action is irreversible and will delete all your data, including listings.")) {
+      return;
+    }
+
+    if (!currentUser) {
+      toast({ title: "Error", description: "You must be logged in to delete your account.", variant: "destructive" });
+      return;
+    }
+
+    // Indicate loading state
+    toast({
+      title: "Deleting Account...",
+      description: "Please wait while we process your request.",
+    });
+
+    try {
+      // Call the Supabase Edge Function
+      const { error: functionError } = await supabase.functions.invoke('delete-user', {
+        // No body needed as the function gets the user from the auth context
+      });
+
+      if (functionError) {
+        console.error('Error invoking delete-user function:', functionError);
+        throw new Error(functionError.message || 'Failed to call delete function.');
+      }
+
+      // If the function call succeeds, Supabase handles auth deletion.
+      // Log the user out on the client-side and redirect.
+      await logout(); // Ensure local session is cleared
+      navigate('/auth');
+      toast({
+        title: "Account Deleted",
+        description: "Your account and associated data have been successfully deleted.",
+      });
+
+    } catch (error: any) {
+      console.error('Failed to delete account:', error);
+      toast({
+        title: "Error Deleting Account",
+        description: error.message || "An unexpected error occurred. Please try again later.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (!currentUser) return null;
 
   const getDisplayName = () => {
@@ -264,13 +310,22 @@ const ProfilePage = () => {
 
               <div className="p-4 border rounded-lg">
                 <h3 className="font-medium mb-2">Account Actions</h3>
-                <Button
-                  variant="destructive"
-                  onClick={handleLogout}
-                >
-                  <LogOut size={16} className="mr-2" />
-                  Sign Out
-                </Button>
+                <div className="flex flex-col space-y-2">
+                  <Button
+                    variant="destructive"
+                    onClick={handleLogout}
+                  >
+                    <LogOut size={16} className="mr-2" />
+                    Sign Out
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={handleDeleteAccount}
+                  >
+                    <Trash2 size={16} className="mr-2" />
+                    Delete Account
+                  </Button>
+                </div>
               </div>
             </div>
           </TabsContent>
