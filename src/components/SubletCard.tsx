@@ -14,6 +14,13 @@ interface SubletCardProps {
   expanded?: boolean;
 }
 
+// Utility function to get the short address (e.g., "123 Main St")
+const getShortAddress = (fullAddress: string): string => {
+  if (!fullAddress) return "";
+  // Split by comma and take the first part (street address)
+  return fullAddress.split(',')[0].trim();
+};
+
 const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false); // State for lightbox
@@ -197,9 +204,9 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
               {getPricingBadge()}
             </div>
             <div className="text-sm text-gray-600 mb-2">
-              {sublet.distanceFromNEU} mi from NU • {formatDateRange()}
+              {getShortAddress(sublet.location)} • {sublet.distanceFromNEU} mi from NU • {formatDateRange()}
             </div>
-            <p className="mt-2 text-gray-800">{sublet.description}</p>
+            <p className="mt-2 text-gray-800 text-sm">{sublet.description}</p>
 
             {/* Display amenity badges */}
             {getAmenityBadges()}
