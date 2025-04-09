@@ -4,7 +4,7 @@ import { useSublet } from "@/contexts/SubletContext";
 import SubletCard from "@/components/SubletCard";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Wifi, Dumbbell, Shield, Check, Loader2, Share, Link, ImageDown } from "lucide-react";
+import { ArrowLeft, Wifi, Dumbbell, Shield, Check, Loader2, Share, Link, ImageDown, MapPin } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +15,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import InteractiveMap from "@/components/InteractiveMap";
+
+// Define type for coordinates
+interface Coordinates {
+  lat: number;
+  lng: number;
+}
 
 const SubletDetailPage = () => {
   const { subletId } = useParams<{ subletId: string }>();
@@ -24,14 +31,54 @@ const SubletDetailPage = () => {
   const { toast } = useToast();
   const shareableContentRef = useRef<HTMLDivElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [locationCoords, setLocationCoords] = useState<Coordinates | null>(null);
+  const [isGeocoding, setIsGeocoding] = useState(true);
+  const [geocodingError, setGeocodingError] = useState<string | null>(null);
 
   const sublet = !isLoadingSublets ? sublets.find(s => s.id === subletId) : undefined;
+  const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string; // Key for Maps JS API (InteractiveMap, Autocomplete)
+  const geocodeApiKey = import.meta.env.VITE_GEOCODE_API_KEY as string; // Dedicated key for Geocoding API fetch call
 
   useEffect(() => {
     if (!isLoadingAuth && !currentUser) {
       navigate('/auth');
     }
   }, [currentUser, isLoadingAuth, navigate]);
+
+  useEffect(() => {
+    if (sublet?.location && geocodeApiKey) {
+      setIsGeocoding(true);
+      setGeocodingError(null);
+      setLocationCoords(null);
+
+      const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(sublet.location)}&key=${geocodeApiKey}`;
+
+      fetch(geocodeUrl)
+        .then(response => response.json())
+        .then(data => {
+          if (data.status === 'OK' && data.results?.[0]?.geometry?.location) {
+            setLocationCoords(data.results[0].geometry.location);
+          } else {
+            console.warn("Geocoding failed:", data.status, data.error_message);
+            setGeocodingError(`Could not find coordinates for the address. Status: ${data.status}`);
+          }
+        })
+        .catch(error => {
+          console.error("Error fetching geocoding data:", error);
+          setGeocodingError("Failed to contact Geocoding service.");
+        })
+        .finally(() => {
+          setIsGeocoding(false);
+        });
+    } else if (sublet && !geocodeApiKey) {
+      console.error("Geocoding API key is missing. Make sure VITE_GEOCODE_API_KEY is set in your .env file.");
+      setGeocodingError("API key is missing. Map cannot be loaded.");
+      setIsGeocoding(false);
+    } else if (!sublet?.location) {
+      setGeocodingError("Location address is missing.");
+      setIsGeocoding(false);
+    }
+  }, [sublet?.location]);
 
   // Function to copy the listing link
   const handleShareLink = async () => {
@@ -248,14 +295,25 @@ const SubletDetailPage = () => {
         <div className="mt-6 bg-white rounded-lg shadow p-4">
           <h2 className="text-lg font-bold mb-2">Location Details</h2>
           <p className="text-gray-700 mb-3">
+            <MapPin className="inline h-4 w-4 mr-1 text-gray-500" />
             {sublet.location}, {sublet.distanceFromNEU} miles from Northeastern University
           </p>
           <div className="mt-4 h-64 bg-gray-200 rounded overflow-hidden">
-            <img
-              src="/lovable-uploads/00e76d61-7cdc-40b9-8203-95d37c2a1f06.png"
-              alt="Map showing location near Northeastern University"
-              className="w-full h-full object-cover"
-            />
+            {isGeocoding ? (
+              <div className="w-full h-full flex items-center justify-center text-gray-500">
+                <Loader2 className="h-6 w-6 animate-spin mr-2" /> Loading map...
+              </div>
+            ) : geocodingError ? (
+              <div className="w-full h-full flex items-center justify-center text-red-600 text-sm px-4 text-center">
+                Error: {geocodingError}
+              </div>
+            ) : locationCoords ? (
+              <InteractiveMap apiKey={googleMapsApiKey || ""} center={locationCoords} />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-gray-500 text-sm">
+                Map could not be loaded.
+              </div>
+            )}
           </div>
         </div>
       </div>
