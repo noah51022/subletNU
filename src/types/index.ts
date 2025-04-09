@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   email: string;
@@ -21,6 +20,8 @@ export interface Sublet {
   pricingType: "firm" | "negotiable";
   amenities?: string[];
   noBrokersFee?: boolean;
+  instagramHandle?: string;
+  snapchatHandle?: string;
 }
 
 export interface Message {

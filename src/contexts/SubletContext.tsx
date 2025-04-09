@@ -24,7 +24,11 @@ export const SubletProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { data, error } = await supabase
         .from('sublets')
-        .select('*')
+        .select(`
+          *,
+          instagram_handle,
+          snapchat_handle
+        `)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -58,6 +62,8 @@ export const SubletProvider = ({ children }: { children: ReactNode }) => {
               pricingType: item.pricing_type as "firm" | "negotiable",
               amenities: item.amenities || [],
               noBrokersFee: item.no_brokers_fee || false,
+              instagramHandle: item.instagram_handle,
+              snapchatHandle: item.snapchat_handle,
             };
           })
         );
@@ -121,6 +127,8 @@ export const SubletProvider = ({ children }: { children: ReactNode }) => {
           pricing_type: subletData.pricingType,
           amenities: subletData.amenities,
           no_brokers_fee: subletData.noBrokersFee,
+          instagram_handle: subletData.instagramHandle,
+          snapchat_handle: subletData.snapchatHandle,
         });
 
       if (error) {
@@ -161,6 +169,8 @@ export const SubletProvider = ({ children }: { children: ReactNode }) => {
       if (subletData.pricingType !== undefined) supabaseData.pricing_type = subletData.pricingType;
       if (subletData.amenities !== undefined) supabaseData.amenities = subletData.amenities;
       if (subletData.noBrokersFee !== undefined) supabaseData.no_brokers_fee = subletData.noBrokersFee;
+      if (subletData.instagramHandle !== undefined) supabaseData.instagram_handle = subletData.instagramHandle;
+      if (subletData.snapchatHandle !== undefined) supabaseData.snapchat_handle = subletData.snapchatHandle;
 
       const { error } = await supabase
         .from('sublets')

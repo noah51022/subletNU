@@ -40,8 +40,12 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
 
   // Open lightbox when image is clicked
   const handleImageClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card click when clicking image
-    setIsLightboxOpen(true);
+    // Only open lightbox if the card is expanded (on the detail page)
+    if (expanded) {
+      e.stopPropagation(); // Prevent triggering other clicks if needed
+      setIsLightboxOpen(true);
+    }
+    // If not expanded, do nothing here; the main card click handler will navigate
   };
 
   const handleImageLoad = (event: React.SyntheticEvent<HTMLImageElement, Event>) => {
@@ -144,7 +148,10 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
   const cardContent = (
     <>
       <div className={`photo-carousel relative w-full overflow-hidden ${aspectRatioClass} ${expanded ? 'rounded-t-lg' : 'rounded-t-md'} bg-gray-100 flex items-center justify-center`}>
-        <div onClick={handleImageClick} className="cursor-pointer w-full h-full flex items-center justify-center">
+        <div
+          onClick={expanded ? handleImageClick : undefined} // Attach click handler only when expanded
+          className={`cursor-${expanded ? 'pointer' : 'default'} w-full h-full flex items-center justify-center`}
+        >
           <img
             key={sublet.photos[currentPhotoIndex]}
             src={sublet.photos[currentPhotoIndex]}
@@ -200,8 +207,23 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
         </div>
 
         <div className="mt-4 flex justify-between items-center">
-          <div className="text-xs text-gray-500">
-            Posted by: {sublet.userEmail}
+          <div className="text-xs text-gray-500 flex items-center space-x-2">
+            {/* Conditionally render social handles or email */}
+            {sublet.instagramHandle ? (
+              <span className="flex items-center">
+                {/* Update IMG tag src */}
+                <img src="/images/icons8-instagram.svg" alt="Instagram" className="w-4 h-4 mr-1" />
+                @{sublet.instagramHandle}
+              </span>
+            ) : sublet.snapchatHandle ? (
+              <span className="flex items-center">
+                {/* Update IMG tag src */}
+                <img src="/images/icons8-snapchat.svg" alt="Snapchat" className="w-4 h-4 mr-1" />
+                @{sublet.snapchatHandle}
+              </span>
+            ) : (
+              <span>Posted by: {sublet.userEmail}</span>
+            )}
           </div>
 
           <Button

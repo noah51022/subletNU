@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSublet } from "@/contexts/SubletContext";
@@ -18,18 +18,19 @@ import { Checkbox } from "@/components/ui/checkbox";
 import BottomNav from "@/components/BottomNav";
 import { toast } from "@/hooks/use-toast";
 import { format, differenceInCalendarMonths } from "date-fns";
-import { CalendarIcon, ArrowLeft, Loader2, Share2 } from "lucide-react";
+import { CalendarIcon, ArrowLeft, Loader2, Share2, XCircle, ImagePlus } from "lucide-react";
 import { CalendarIcon as CalendarIcon2 } from "lucide-react";
 import AmenitiesSelector from "@/components/AmenitiesSelector";
 import LocationAutocomplete from "@/components/LocationAutocomplete";
 
 // Define Northeastern University coordinates
 const NEU_COORDINATES = { lat: 42.3398, lng: -71.0892 };
+const MAX_PHOTOS = 5; // Define max photos
 
 const EditSubletPage = () => {
   const { subletId } = useParams<{ subletId: string }>();
   const { currentUser } = useAuth();
-  const { sublets, updateSublet } = useSublet();
+  const { sublets, updateSublet, uploadPhoto } = useSublet();
   const navigate = useNavigate();
 
   const sublet = sublets.find(s => s.id === subletId);
@@ -41,13 +42,18 @@ const EditSubletPage = () => {
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   const [photos, setPhotos] = useState<string[]>([]);
-  const [uploading, setUploading] = useState(false);
+  const [photoFilesToAdd, setPhotoFilesToAdd] = useState<File[]>([]);
+  const [photoPreviewsToAdd, setPhotoPreviewsToAdd] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
   const [genderPreference, setGenderPreference] = useState<"male" | "female" | "any">("any");
   const [pricingType, setPricingType] = useState<"firm" | "negotiable">("firm");
   const [amenities, setAmenities] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [noBrokersFee, setNoBrokersFee] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [instagramHandle, setInstagramHandle] = useState("");
+  const [snapchatHandle, setSnapchatHandle] = useState("");
 
   // Load sublet data
   useEffect(() => {
@@ -63,11 +69,13 @@ const EditSubletPage = () => {
       setDescription(sublet.description);
       setStartDate(new Date(sublet.startDate));
       setEndDate(new Date(sublet.endDate));
-      setPhotos(sublet.photos);
+      setPhotos(sublet.photos || []);
       setGenderPreference(sublet.genderPreference);
       setPricingType(sublet.pricingType);
       setAmenities(sublet.amenities || []);
       setNoBrokersFee(sublet.noBrokersFee || false);
+      setInstagramHandle(sublet.instagramHandle || "");
+      setSnapchatHandle(sublet.snapchatHandle || "");
       setIsLoading(false);
     } else {
       // Sublet not found or doesn't belong to user
@@ -79,6 +87,14 @@ const EditSubletPage = () => {
       navigate('/profile');
     }
   }, [currentUser, navigate, sublet]);
+
+  // Cleanup object URLs on unmount or when previews change
+  useEffect(() => {
+    const previews = photoPreviewsToAdd; // Capture current previews
+    return () => {
+      previews.forEach(URL.revokeObjectURL);
+    };
+  }, [photoPreviewsToAdd]);
 
   // Calculate total cost based on price and date range
   const totalCost = useMemo(() => {
@@ -127,22 +143,93 @@ const EditSubletPage = () => {
     }
   }, [setDistanceFromNEU]);
 
+  // Function to handle removing an *existing* photo (by URL)
+  const handleRemoveExistingPhoto = (urlToRemove: string) => {
+    setPhotos(currentPhotos => currentPhotos.filter((url) => url !== urlToRemove));
+    toast({
+      title: "Photo Marked for Removal",
+      description: "The photo will be removed when you update the listing.",
+      variant: "default"
+    });
+  };
+
+  // Function to handle removing a *newly added* photo (by index in the preview/file arrays)
+  const handleRemoveNewPhotoPreview = (indexToRemove: number) => {
+    // Revoke the object URL before removing the preview
+    URL.revokeObjectURL(photoPreviewsToAdd[indexToRemove]);
+
+    setPhotoFilesToAdd(prev => prev.filter((_, index) => index !== indexToRemove));
+    setPhotoPreviewsToAdd(prev => prev.filter((_, index) => index !== indexToRemove));
+  };
+
+  // Handle file selection for adding new photos
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || !currentUser) return;
+
+    const newFiles: File[] = [];
+    const newPreviews: string[] = [];
+
+    const currentTotalPhotos = photos.length + photoFilesToAdd.length;
+    const remainingSlots = MAX_PHOTOS - currentTotalPhotos;
+    const filesToProcess = Array.from(files).slice(0, remainingSlots);
+
+    if (files.length > remainingSlots) {
+      toast({
+        title: "Too Many Photos",
+        description: `You can only add ${remainingSlots} more photo(s). Max ${MAX_PHOTOS} photos allowed.`,
+        variant: "destructive",
+      });
+    }
+
+    filesToProcess.forEach(file => {
+      if (file.type.startsWith('image/')) {
+        if (photos.length + photoFilesToAdd.length + newFiles.length < MAX_PHOTOS) {
+          newFiles.push(file);
+          newPreviews.push(URL.createObjectURL(file));
+        }
+      } else {
+        toast({
+          title: "Invalid File Type",
+          description: `File "${file.name}" is not a supported image type.`,
+          variant: "destructive",
+        });
+      }
+    });
+
+    setPhotoFilesToAdd(prev => [...prev, ...newFiles]);
+    setPhotoPreviewsToAdd(prev => [...prev, ...newPreviews]);
+
+    // Clear the input value
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser || !sublet) return;
 
-    if (isSubmitting) return;
+    const currentTotalPhotos = photos.length + photoFilesToAdd.length;
+    if (isSubmitting || isUploadingPhotos) return; // Prevent double submission
 
-    // Basic validation
-    if (!price || !locationInputValue || !distanceFromNEU || !description || !startDate || !endDate || photos.length === 0) {
+    // Validation including photo count
+    if (!price || !locationInputValue || !distanceFromNEU || !description || !startDate || !endDate || currentTotalPhotos === 0) {
       toast({
         title: "Missing Fields",
-        description: "Please fill in all required fields (including selecting a valid location) and upload at least one photo",
+        description: "Please fill in all required fields (including location and dates) and ensure at least one photo is present.",
         variant: "destructive",
       });
       return;
     }
-
+    if (currentTotalPhotos > MAX_PHOTOS) {
+      toast({
+        title: "Too Many Photos",
+        description: `Please remove ${currentTotalPhotos - MAX_PHOTOS} photo(s). Maximum ${MAX_PHOTOS} allowed.`,
+        variant: "destructive",
+      });
+      return;
+    }
     if (isNaN(parseFloat(price)) || parseFloat(price) <= 0) {
       toast({
         title: "Invalid Price",
@@ -151,7 +238,6 @@ const EditSubletPage = () => {
       });
       return;
     }
-
     if (isNaN(parseFloat(distanceFromNEU)) || parseFloat(distanceFromNEU) <= 0) {
       toast({
         title: "Invalid Distance",
@@ -160,7 +246,6 @@ const EditSubletPage = () => {
       });
       return;
     }
-
     if (startDate > endDate) {
       toast({
         title: "Invalid Date Range",
@@ -170,10 +255,40 @@ const EditSubletPage = () => {
       return;
     }
 
-    try {
-      setIsSubmitting(true);
+    setIsSubmitting(true); // Indicate overall submission start
+    let finalPhotoUrls = [...photos]; // Start with existing, filtered photos
 
-      // Use updateSublet from context
+    // --- Upload New Photos if any ---
+    if (photoFilesToAdd.length > 0) {
+      setIsUploadingPhotos(true); // Indicate photo upload start
+      const uploadedUrls: string[] = [];
+      try {
+        for (const file of photoFilesToAdd) {
+          const publicUrl = await uploadPhoto(file, currentUser.id);
+          if (publicUrl) {
+            uploadedUrls.push(publicUrl);
+          } else {
+            // Throw error if uploadPhoto returns null (it handles its own toast)
+            throw new Error(`Failed to upload ${file.name}.`);
+          }
+        }
+        finalPhotoUrls = [...finalPhotoUrls, ...uploadedUrls]; // Add new URLs
+        setPhotoFilesToAdd([]); // Clear the files to add state
+        setPhotoPreviewsToAdd([]); // Clear previews
+      } catch (uploadError) {
+        console.error("Error uploading photos during update:", uploadError);
+        // Toasting is handled within uploadPhoto or the catch block above
+        setIsUploadingPhotos(false);
+        setIsSubmitting(false);
+        return; // Stop the submission process
+      } finally {
+        setIsUploadingPhotos(false); // Indicate photo upload end
+      }
+    }
+    // --- End Upload New Photos ---
+
+    try {
+      // Use updateSublet from context with the final list of photo URLs
       await updateSublet(sublet.id, {
         price: parseFloat(price),
         location: locationInputValue,
@@ -181,11 +296,13 @@ const EditSubletPage = () => {
         description,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
-        photos,
+        photos: finalPhotoUrls, // Pass the combined list
         genderPreference: genderPreference,
         pricingType: pricingType,
         amenities,
         noBrokersFee: noBrokersFee,
+        instagramHandle: instagramHandle.trim() || null,
+        snapchatHandle: snapchatHandle.trim() || null,
       });
 
       toast({
@@ -197,12 +314,12 @@ const EditSubletPage = () => {
     } catch (error: any) {
       console.error("Error updating sublet:", error);
       toast({
-        title: "Error",
-        description: error.message || "Failed to update your listing",
+        title: "Update Error",
+        description: error.message || "Failed to update your listing after photo upload",
         variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+      setIsSubmitting(false); // Indicate overall submission end regardless of success/failure
     }
   };
 
@@ -447,11 +564,132 @@ const EditSubletPage = () => {
           </div>
         </div>
 
+        <div className="space-y-4 pt-4 border-t">
+          <h3 className="text-md font-semibold text-gray-700">Social Media (Optional)</h3>
+          <p className="text-xs text-gray-500">Update your Instagram or Snapchat usernames.</p>
+          <div className="space-y-2">
+            <label htmlFor="instagramHandle" className="text-sm font-medium">
+              Instagram Username
+            </label>
+            <Input
+              id="instagramHandle"
+              placeholder="e.g., northeastern"
+              value={instagramHandle}
+              onChange={(e) => setInstagramHandle(e.target.value.replace(/[^a-zA-Z0-9_.]/g, ''))}
+              maxLength={30}
+            />
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="snapchatHandle" className="text-sm font-medium">
+              Snapchat Username
+            </label>
+            <Input
+              id="snapchatHandle"
+              placeholder="e.g., northeasternu"
+              value={snapchatHandle}
+              onChange={(e) => setSnapchatHandle(e.target.value.replace(/[^a-zA-Z0-9_.-]/g, ''))}
+              maxLength={15}
+            />
+          </div>
+        </div>
+
+        {/* Photo Display and Management Section */}
+        <div className="space-y-2 pt-4 border-t">
+          <h3 className="text-md font-semibold text-gray-700">Manage Photos ({photos.length + photoPreviewsToAdd.length} / {MAX_PHOTOS}) *</h3>
+          <p className="text-xs text-gray-500">
+            View, remove, or add photos. You need at least one photo.
+          </p>
+          {/* Hidden File Input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileSelect}
+            accept="image/*"
+            multiple
+            style={{ display: 'none' }}
+            id="photo-upload"
+            disabled={isUploadingPhotos || (photos.length + photoFilesToAdd.length >= MAX_PHOTOS)}
+          />
+
+          {/* Grid for Photos */}
+          <div className="grid grid-cols-3 gap-2">
+            {/* Existing Photos */}
+            {photos.map((photoUrl) => (
+              <div key={photoUrl} className="relative group aspect-square">
+                <img
+                  src={photoUrl}
+                  alt="Existing sublet photo"
+                  className="w-full h-full object-cover rounded-md"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleRemoveExistingPhoto(photoUrl)}
+                  className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-label="Remove existing photo"
+                  disabled={isUploadingPhotos || isSubmitting}
+                >
+                  <XCircle className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+
+            {/* New Photo Previews */}
+            {photoPreviewsToAdd.map((previewUrl, index) => (
+              <div key={previewUrl} className="relative group aspect-square">
+                <img
+                  src={previewUrl}
+                  alt={`New photo preview ${index + 1}`}
+                  className="w-full h-full object-cover rounded-md"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleRemoveNewPhotoPreview(index)}
+                  className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                  aria-label="Remove new photo"
+                  disabled={isUploadingPhotos || isSubmitting}
+                >
+                  <XCircle className="h-4 w-4" />
+                </button>
+                {/* Optional: Add an indicator for 'new' photos if needed */}
+                <div className="absolute bottom-1 left-1 bg-blue-500 text-white text-[10px] px-1 rounded-sm">New</div>
+              </div>
+            ))}
+
+            {/* Upload Slot */}
+            {(photos.length + photoFilesToAdd.length) < MAX_PHOTOS && (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="aspect-square rounded border-2 border-dashed border-gray-300 flex items-center justify-center hover:border-neu-red cursor-pointer text-gray-400"
+                disabled={isUploadingPhotos || isSubmitting}
+                aria-label="Add photo"
+              >
+                {isUploadingPhotos ? <Loader2 className="h-6 w-6 animate-spin" /> : <ImagePlus className="h-6 w-6" />}
+              </button>
+            )}
+          </div>
+
+          {/* Validation/Info Message */}
+          {(photos.length + photoPreviewsToAdd.length === 0) && !isUploadingPhotos && (
+            <p className="text-sm text-red-600 mt-2">Please add at least one photo.</p>
+          )}
+          {(photos.length + photoPreviewsToAdd.length > 0) && !isUploadingPhotos && (
+            <p className="text-xs text-gray-500 mt-1">Click 'Update Listing' to save changes.</p>
+          )}
+          {isUploadingPhotos && (
+            <div className="flex items-center text-sm text-gray-600 mt-2">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Uploading photos...
+            </div>
+          )}
+        </div>
+
         <div className="flex justify-between">
           <Button
             type="button"
             variant="outline"
             onClick={() => navigate('/profile')}
+            disabled={isSubmitting || isUploadingPhotos} // Disable cancel during operations
           >
             Cancel
           </Button>
@@ -459,12 +697,12 @@ const EditSubletPage = () => {
           <Button
             type="submit"
             className="bg-neu-red hover:bg-red-800"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isUploadingPhotos || (photos.length + photoFilesToAdd.length === 0)} // Disable submit if uploading, submitting, or no photos
           >
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Updating...
+                {isUploadingPhotos ? 'Uploading...' : 'Saving...'}
               </>
             ) : (
               "Update Listing"

@@ -214,6 +214,37 @@ const SubletDetailPage = () => {
           </div>
         </div>
 
+        {/* Add Social Media Handles Section */}
+        {(sublet.instagramHandle || sublet.snapchatHandle) && (
+          <div className="mt-6 bg-white rounded-lg shadow p-4">
+            <h2 className="text-lg font-bold mb-3">Contact via Social Media</h2>
+            <div className="flex flex-wrap gap-2">
+              {sublet.instagramHandle && (
+                <a
+                  href={`https://www.instagram.com/${sublet.instagramHandle}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center bg-gradient-to-r from-pink-500 via-red-500 to-yellow-500 text-white font-medium px-3 py-1 rounded-md text-sm hover:opacity-90 transition-opacity"
+                >
+                  {/* You might want to add an Instagram icon here */}
+                  @{sublet.instagramHandle}
+                </a>
+              )}
+              {sublet.snapchatHandle && (
+                <a
+                  href={`https://www.snapchat.com/add/${sublet.snapchatHandle}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center bg-yellow-300 text-black font-medium px-3 py-1 rounded-md text-sm hover:opacity-90 transition-opacity"
+                >
+                  {/* You might want to add a Snapchat icon here */}
+                  @{sublet.snapchatHandle}
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="mt-6 bg-white rounded-lg shadow p-4">
           <h2 className="text-lg font-bold mb-2">Location Details</h2>
           <p className="text-gray-700 mb-3">

@@ -74,6 +74,24 @@ const ProfileListingCard = ({ sublet, onDelete, onEdit }: ProfileListingCardProp
             {sublet.description}
           </p>
 
+          {/* Add Social Media Handles Display */}
+          <div className="flex flex-wrap gap-x-2 gap-y-1 text-xs text-gray-500 mt-2">
+            {sublet.instagramHandle && (
+              <span className="flex items-center">
+                {/* Update IMG tag src */}
+                <img src="/images/icons8-instagram.svg" alt="Instagram" className="w-4 h-4 mr-1" />
+                @{sublet.instagramHandle}
+              </span>
+            )}
+            {sublet.snapchatHandle && (
+              <span className="flex items-center">
+                {/* Update IMG tag src */}
+                <img src="/images/icons8-snapchat.svg" alt="Snapchat" className="w-4 h-4 mr-1" />
+                @{sublet.snapchatHandle}
+              </span>
+            )}
+          </div>
+
           <div className="flex justify-end mt-2 gap-2">
             <Button
               variant="outline"

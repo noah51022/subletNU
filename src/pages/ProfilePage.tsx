@@ -56,7 +56,11 @@ const ProfilePage = () => {
     try {
       const { data, error } = await supabase
         .from('sublets')
-        .select('*')
+        .select(`
+          *,
+          instagram_handle,
+          snapchat_handle
+        `)
         .eq('user_id', currentUser.id)
         .order('created_at', { ascending: false });
 
@@ -87,6 +91,8 @@ const ProfilePage = () => {
           pricingType: item.pricing_type as "firm" | "negotiable",
           amenities: item.amenities || [],
           noBrokersFee: item.no_brokers_fee || false,
+          instagramHandle: item.instagram_handle,
+          snapchatHandle: item.snapchat_handle,
         }));
 
         setMyListings(mySublets);

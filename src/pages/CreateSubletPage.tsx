@@ -46,6 +46,9 @@ const CreateSubletPage = () => {
   const [amenities, setAmenities] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [noBrokersFee, setNoBrokersFee] = useState(false);
+  // Add state for social media handles
+  const [instagramHandle, setInstagramHandle] = useState("");
+  const [snapchatHandle, setSnapchatHandle] = useState("");
 
   // New state for file handling
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
@@ -259,6 +262,9 @@ const CreateSubletPage = () => {
         pricingType,
         amenities,
         noBrokersFee,
+        // Add handles to submission data
+        instagramHandle: instagramHandle.trim() || undefined, // Send undefined if empty
+        snapchatHandle: snapchatHandle.trim() || undefined,   // Send undefined if empty
       });
 
       navigate('/');
@@ -527,6 +533,35 @@ const CreateSubletPage = () => {
             <p className="text-xs text-gray-500 text-right">
               {description.length}/200
             </p>
+          </div>
+          {/* Add Social Media Inputs */}
+          <div className="space-y-4 pt-4 border-t">
+            <h3 className="text-md font-semibold text-gray-700">Social Media (Optional)</h3>
+            <p className="text-xs text-gray-500">Add your Instagram or Snapchat so interested people can reach out.</p>
+            <div className="space-y-2">
+              <label htmlFor="instagramHandle" className="text-sm font-medium">
+                Instagram Username
+              </label>
+              <Input
+                id="instagramHandle"
+                placeholder="e.g., northeastern"
+                value={instagramHandle}
+                onChange={(e) => setInstagramHandle(e.target.value.replace(/[^a-zA-Z0-9_.]/g, ''))} // Basic validation
+                maxLength={30}
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="snapchatHandle" className="text-sm font-medium">
+                Snapchat Username
+              </label>
+              <Input
+                id="snapchatHandle"
+                placeholder="e.g., northeasternu"
+                value={snapchatHandle}
+                onChange={(e) => setSnapchatHandle(e.target.value.replace(/[^a-zA-Z0-9_.-]/g, ''))} // Basic validation
+                maxLength={15}
+              />
+            </div>
           </div>
           {/* Submit Button */}
           <Button
