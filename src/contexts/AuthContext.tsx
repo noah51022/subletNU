@@ -10,7 +10,7 @@ type AuthContextType = {
   session: Session | null;
   isLoadingAuth: boolean;
   login: (email: string, password: string) => Promise<boolean>;
-  register: (email: string, password: string, metadata?: { first_name?: string; last_name?: string }) => Promise<boolean>;
+  register: (email: string, password: string, metadata?: { first_name?: string; last_name?: string; captcha_token?: string }) => Promise<boolean>;
   logout: () => Promise<void>;
 };
 
@@ -113,7 +113,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const register = async (email: string, password: string, metadata?: { first_name?: string; last_name?: string }): Promise<boolean> => {
+  const register = async (email: string, password: string, metadata?: { first_name?: string; last_name?: string; captcha_token?: string }): Promise<boolean> => {
     if (!email.endsWith('@northeastern.edu')) {
       toast({
         title: "Invalid Email",
@@ -123,12 +123,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return false;
     }
 
+    // Verify captcha token if provided
+    if (metadata?.captcha_token) {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-captcha`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            token: metadata.captcha_token,
+          }),
+        });
+
+        const result = await response.json();
+        if (!result.success) {
+          toast({
+            title: "Verification Failed",
+            description: "Please complete the captcha verification again.",
+            variant: "destructive",
+          });
+          return false;
+        }
+      } catch (error) {
+        toast({
+          title: "Verification Error",
+          description: "Failed to verify captcha. Please try again.",
+          variant: "destructive",
+        });
+        return false;
+      }
+    }
+
     try {
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: metadata
+          data: {
+            first_name: metadata?.first_name,
+            last_name: metadata?.last_name
+          }
         }
       });
 

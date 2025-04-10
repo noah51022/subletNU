@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,91 @@ const AuthPage = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  // CAPTCHA: Commented out for development
+  // const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  // const turnstileRef = useRef<HTMLDivElement>(null);
+  // const widgetIdRef = useRef<string | null>(null);
   const { login, register, currentUser } = useAuth();
   const navigate = useNavigate();
+
+  // CAPTCHA: Commented out for development
+  /* 
+  // Initialize Turnstile
+  useEffect(() => {
+    let mounted = true;
+    let retryCount = 0;
+    const maxRetries = 5;
+
+    const initTurnstile = () => {
+      if (!mounted || !turnstileRef.current || isLogin) return;
+
+      if (typeof window.turnstile === 'undefined') {
+        if (retryCount < maxRetries) {
+          console.log(`Waiting for Turnstile to load... (attempt ${retryCount + 1}/${maxRetries})`);
+          retryCount++;
+          setTimeout(initTurnstile, 1000);
+        }
+        return;
+      }
+
+      console.log("Initializing Turnstile");
+
+      try {
+        // Cleanup any existing widget
+        if (widgetIdRef.current) {
+          window.turnstile.remove(widgetIdRef.current);
+          widgetIdRef.current = null;
+        }
+
+        // Render new widget
+        widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
+          sitekey: import.meta.env.VITE_CAPTCHA_SITE_KEY,
+          callback: function (token: string) {
+            console.log("Turnstile verification successful");
+            if (mounted) setCaptchaToken(token);
+          },
+          'error-callback': function () {
+            console.error("Turnstile error");
+            if (mounted) setCaptchaToken(null);
+          },
+          'expired-callback': function () {
+            console.log("Turnstile expired");
+            if (mounted) setCaptchaToken(null);
+          },
+          theme: 'light',
+          appearance: 'always'
+        });
+      } catch (error) {
+        console.error("Error initializing Turnstile:", error);
+        if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(initTurnstile, 1000);
+        }
+      }
+    };
+
+    // Start initialization with a small delay
+    const timer = setTimeout(initTurnstile, 500);
+
+    return () => {
+      mounted = false;
+      clearTimeout(timer);
+      if (widgetIdRef.current) {
+        try {
+          window.turnstile.remove(widgetIdRef.current);
+        } catch (e) {
+          console.warn("Error cleaning up Turnstile:", e);
+        }
+        widgetIdRef.current = null;
+      }
+    };
+  }, [isLogin]);
+
+  // Reset widget when switching modes
+  useEffect(() => {
+    setCaptchaToken(null);
+  }, [isLogin]);
+  */
 
   // Redirect if already logged in
   useEffect(() => {
@@ -35,6 +118,19 @@ const AuthPage = () => {
       return;
     }
 
+    // CAPTCHA: Commented out for development
+    /*
+    // Check for captcha token when signing up
+    if (!isLogin && !captchaToken) {
+      toast({
+        title: "Verification Required",
+        description: "Please complete the captcha verification.",
+        variant: "destructive",
+      });
+      return;
+    }
+    */
+
     setIsLoading(true);
 
     try {
@@ -47,7 +143,9 @@ const AuthPage = () => {
         // Pass additional user metadata for first and last name
         const success = await register(email, password, {
           first_name: firstName,
-          last_name: lastName
+          last_name: lastName,
+          // CAPTCHA: Commented out for development
+          // captcha_token: captchaToken
         });
         if (success) {
           toast({
@@ -156,10 +254,17 @@ const AuthPage = () => {
                 )}
               </div>
 
+              {/* CAPTCHA: Commented out for development */}
+              {/* {!isLogin && (
+                <div className="flex justify-center">
+                  <div ref={turnstileRef} className="cf-turnstile" />
+                </div>
+              )} */}
+
               <Button
                 type="submit"
                 className="w-full bg-neu-red hover:bg-neu-red/90"
-                disabled={isLoading}
+                disabled={isLoading /* || (!isLogin && !captchaToken) */}
               >
                 {isLoading ? "Processing..." : isLogin ? "Log In" : "Sign Up"}
               </Button>
@@ -181,5 +286,20 @@ const AuthPage = () => {
     </div>
   );
 };
+
+// CAPTCHA: Commented out for development
+/*
+// Add TypeScript declarations for Turnstile
+declare global {
+  interface Window {
+    turnstile: {
+      render: (container: string | HTMLElement, options: any) => string;
+      reset: (widgetId?: string) => void;
+      remove: (widgetId: string) => void;
+      getResponse: (widgetId: string) => string;
+    };
+  }
+}
+*/
 
 export default AuthPage;

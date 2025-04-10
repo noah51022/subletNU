@@ -157,8 +157,8 @@ const MessagesPage = () => {
 
   if (!activeUser && !userId) {
     return (
-      <div className="pb-20 max-w-2xl mx-auto">
-        <header className="bg-neu-red text-white p-4">
+      <div className="pb-20 mx-auto w-full max-w-[90%] md:max-w-4xl lg:max-w-6xl">
+        <header className="bg-neu-red text-white p-4 rounded-b-lg">
           <h1 className="text-xl font-bold">Messages</h1>
         </header>
 
@@ -224,8 +224,8 @@ const MessagesPage = () => {
   }
 
   return (
-    <div className="pb-20 h-screen flex flex-col max-w-2xl mx-auto">
-      <header className="bg-neu-red text-white p-4 flex items-center">
+    <div className="pb-20 h-screen flex flex-col mx-auto w-full max-w-[90%] md:max-w-4xl lg:max-w-6xl">
+      <header className="bg-neu-red text-white p-4 flex items-center rounded-b-lg">
         <Button
           variant="ghost"
           size="icon"

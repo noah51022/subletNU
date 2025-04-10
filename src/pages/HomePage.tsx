@@ -21,8 +21,8 @@ const HomePage = () => {
   if (!currentUser) return null;
 
   return (
-    <div className="pb-20 max-w-2xl mx-auto">
-      <header className="bg-neu-red text-white p-4 text-center">
+    <div className="pb-20 mx-auto w-full max-w-[90%] md:max-w-4xl lg:max-w-6xl">
+      <header className="bg-neu-red text-white p-4 text-center rounded-b-lg">
         <h1 className="text-xl font-bold">SubletNU</h1>
       </header>
 
