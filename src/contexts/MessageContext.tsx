@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { Message as BaseMessage } from "../types";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -38,7 +38,8 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
   const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
   const { currentUser } = useAuth();
 
-  const fetchMessages = async () => {
+  // Memoize fetchMessages to prevent infinite subscription cycle
+  const fetchMessages = useCallback(async () => {
     if (!currentUser) {
       setMessages([]);
       setIsLoadingMessages(false);
@@ -47,48 +48,78 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
 
     setIsLoadingMessages(true);
     try {
-      const { data, error } = await supabase
+      // First, get the total count
+      const { count, error: countError } = await supabase
         .from('messages')
-        .select('*')
-        .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
-        .order('created_at', { ascending: true });
+        .select('*', { count: 'exact', head: true })
+        .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`);
 
-      if (error) {
-        console.error('Error fetching messages:', error);
-        toast({
-          title: "Error",
-          description: "Could not fetch messages.",
-          variant: "destructive",
-        });
+      if (countError) {
+        throw countError;
+      }
+
+      // If there are no messages, return early
+      if (count === 0) {
         setMessages([]);
+        setIsLoadingMessages(false);
         return;
       }
 
-      if (data) {
-        const mappedMessages: ExtendedMessage[] = data.map((msg) => ({
-          id: msg.id,
-          senderId: msg.sender_id,
-          receiverId: msg.receiver_id,
-          text: msg.text,
-          timestamp: msg.created_at,
-          isRead: msg.is_read,
-        }));
-        setMessages(mappedMessages);
-      } else {
-        setMessages([]);
+      // Fetch messages in chunks of 50
+      const pageSize = 50;
+      const pages = Math.ceil(count / pageSize);
+      let allMessages: ExtendedMessage[] = [];
+
+      for (let page = 0; page < pages; page++) {
+        const { data, error } = await supabase
+          .from('messages')
+          .select('*')
+          .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
+          .order('created_at', { ascending: true })
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+
+        if (error) {
+          console.error(`Error fetching messages page ${page}:`, error);
+          // Continue with partial data if we have some
+          if (allMessages.length > 0) {
+            break;
+          }
+          throw error;
+        }
+
+        if (data) {
+          const mappedMessages: ExtendedMessage[] = data.map((msg) => ({
+            id: msg.id,
+            senderId: msg.sender_id,
+            receiverId: msg.receiver_id,
+            text: msg.text,
+            timestamp: msg.created_at,
+            isRead: msg.is_read,
+          }));
+          allMessages = [...allMessages, ...mappedMessages];
+        }
+
+        // Small delay between requests to prevent rate limiting
+        if (page < pages - 1) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
       }
+
+      setMessages(allMessages);
     } catch (error) {
       console.error('Failed to fetch messages:', error);
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred while fetching messages.",
-        variant: "destructive",
-      });
-      setMessages([]);
+      // Only show error toast if we have no messages
+      if (messages.length === 0) {
+        toast({
+          title: "Error",
+          description: "Could not fetch messages. Please try refreshing the page.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsLoadingMessages(false);
     }
-  };
+  }, [currentUser]); // Only depend on currentUser
 
   const markMessagesAsRead = async (senderId: string) => {
     if (!currentUser) return;
@@ -106,7 +137,6 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      // Update local state
       setMessages(prev => prev.map(msg =>
         msg.senderId === senderId && msg.receiverId === currentUser.id
           ? { ...msg, isRead: true }
@@ -129,102 +159,98 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     let messageChannel: RealtimeChannel | null = null;
+    let retryCount = 0;
+    let retryTimeout: NodeJS.Timeout | null = null;
+    const maxRetries = 3;
+    const retryDelay = 1000; // 1 second
 
-    const setupMessages = async () => {
-      await fetchMessages();
+    const setupSubscription = async () => {
+      if (!currentUser) return;
 
-      if (currentUser) {
-        messageChannel = supabase
-          .channel(`realtime:messages:${currentUser.id}`)
-          .on(
-            'postgres_changes',
-            {
-              event: 'INSERT',
-              schema: 'public',
-              table: 'messages',
-              filter: `sender_id=eq.${currentUser.id}`,
-            },
-            (payload) => {
-              const newMessage = payload.new as any;
-              const mappedMessage: ExtendedMessage = {
-                id: newMessage.id,
-                senderId: newMessage.sender_id,
-                receiverId: newMessage.receiver_id,
-                text: newMessage.text,
-                timestamp: newMessage.created_at,
-                isRead: newMessage.is_read,
-              };
-              setMessages((prev) =>
-                prev.find((m) => m.id === mappedMessage.id) ? prev : [...prev, mappedMessage]
-              );
-            }
-          )
-          .on(
-            'postgres_changes',
-            {
-              event: 'INSERT',
-              schema: 'public',
-              table: 'messages',
-              filter: `receiver_id=eq.${currentUser.id}`,
-            },
-            (payload) => {
-              const newMessage = payload.new as any;
-              const mappedMessage: ExtendedMessage = {
-                id: newMessage.id,
-                senderId: newMessage.sender_id,
-                receiverId: newMessage.receiver_id,
-                text: newMessage.text,
-                timestamp: newMessage.created_at,
-                isRead: newMessage.is_read,
-              };
-              setMessages((prev) =>
-                prev.find((m) => m.id === mappedMessage.id) ? prev : [...prev, mappedMessage]
-              );
-            }
-          )
-          .on(
-            'postgres_changes',
-            {
-              event: 'UPDATE',
-              schema: 'public',
-              table: 'messages',
-              filter: `receiver_id=eq.${currentUser.id}`,
-            },
-            (payload) => {
-              const updatedMessage = payload.new as any;
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === updatedMessage.id
-                    ? {
-                      ...msg,
-                      isRead: updatedMessage.is_read,
-                    }
-                    : msg
-                )
-              );
-            }
-          )
-          .subscribe((status, err) => {
-            if (status === 'SUBSCRIBED') {
-            } else if (status === 'CHANNEL_ERROR') {
-              console.error('Messages channel error:', err);
-              toast({ title: "Realtime Error", description: "Could not connect to live message updates.", variant: "destructive" });
-            } else if (status === 'TIMED_OUT') {
-              console.warn('Messages channel timed out');
-            }
+      // Clean up existing subscription if any
+      if (messageChannel) {
+        await supabase.removeChannel(messageChannel);
+        messageChannel = null;
+      }
+
+      messageChannel = supabase
+        .channel(`messages:${currentUser.id}`)
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `receiver_id=eq.${currentUser.id}`,
+        }, (payload) => {
+          const newMessage = payload.new as any;
+          const mappedMessage: ExtendedMessage = {
+            id: newMessage.id,
+            senderId: newMessage.sender_id,
+            receiverId: newMessage.receiver_id,
+            text: newMessage.text,
+            timestamp: newMessage.created_at,
+            isRead: newMessage.is_read,
+          };
+          setMessages((prev) =>
+            prev.find((m) => m.id === mappedMessage.id) ? prev : [...prev, mappedMessage]
+          );
+        })
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `receiver_id=eq.${currentUser.id}`,
+        }, (payload) => {
+          const updatedMessage = payload.new as any;
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === updatedMessage.id
+                ? {
+                  ...msg,
+                  isRead: updatedMessage.is_read,
+                }
+                : msg
+            )
+          );
+        });
+
+      try {
+        await messageChannel.subscribe();
+        console.log('Successfully subscribed to messages channel');
+        retryCount = 0;
+
+        // Initial fetch of messages
+        await fetchMessages();
+      } catch (error) {
+        console.error('Error in subscription:', error);
+        if (retryCount < maxRetries) {
+          retryCount++;
+          if (retryTimeout) clearTimeout(retryTimeout);
+          retryTimeout = setTimeout(setupSubscription, retryDelay * retryCount);
+        } else {
+          toast({
+            title: "Connection Error",
+            description: "Could not establish real-time connection. Messages may be delayed.",
+            variant: "destructive"
           });
+          // Try to fetch messages manually as fallback
+          await fetchMessages();
+        }
       }
     };
 
-    setupMessages();
+    setupSubscription();
 
+    // Cleanup function
     return () => {
+      if (retryTimeout) {
+        clearTimeout(retryTimeout);
+      }
       if (messageChannel) {
         supabase.removeChannel(messageChannel);
         messageChannel = null;
       }
     };
-  }, [currentUser]);
+  }, [currentUser]); // Only depend on currentUser
 
   const sendMessage = async (receiverId: string, text: string) => {
     if (!currentUser) {
@@ -240,13 +266,15 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('messages')
         .insert({
           sender_id: currentUser.id,
           receiver_id: receiverId,
           text: text.trim(),
-        });
+        })
+        .select()
+        .single();
 
       if (error) {
         console.error("Error sending message:", error);
@@ -256,6 +284,49 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
           variant: "destructive",
         });
         throw error;
+      }
+
+      // Call the notification edge function
+      if (data) {
+        try {
+          console.log('Attempting to call notification function for message:', data.id);
+          const response = await fetch(
+            'https://vojxqyfkkkdxnbevnqmi.functions.supabase.co/send-message-notification',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZvanhxeWZra2tkeG5iZXZucW1pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM2MDYxODUsImV4cCI6MjA1OTE4MjE4NX0.ZU1uohCNE0RQrAwrxQJWyguxQAip_tnK1OU0skwRvEs',
+              },
+              body: JSON.stringify({ messageId: data.id }),
+            }
+          );
+
+          console.log('Notification function response status:', response.status);
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Failed to trigger notification:', {
+              status: response.status,
+              statusText: response.statusText,
+              error: errorText,
+              messageId: data.id,
+              url: 'https://vojxqyfkkkdxnbevnqmi.functions.supabase.co/send-message-notification'
+            });
+          } else {
+            const responseData = await response.json();
+            console.log('Successfully triggered notification:', {
+              messageId: data.id,
+              response: responseData
+            });
+          }
+        } catch (notifyError) {
+          console.error('Error triggering notification:', {
+            error: notifyError,
+            messageId: data.id,
+            url: 'https://vojxqyfkkkdxnbevnqmi.functions.supabase.co/send-message-notification'
+          });
+        }
       }
     } catch (error) {
       console.error("Failed to send message:", error);

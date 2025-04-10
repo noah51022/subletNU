@@ -273,17 +273,17 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
           <div className="text-sm text-gray-600">
             {/* Social Media Links */}
             {(sublet.instagramHandle || sublet.snapchatHandle) ? (
-              <div className="flex items-center space-x-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                 {sublet.instagramHandle && (
                   <a
                     href={`https://instagram.com/${sublet.instagramHandle}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="flex items-center space-x-2 hover:opacity-70 transition-opacity"
+                    className="flex items-center gap-2 hover:opacity-70 transition-opacity"
                   >
                     <img src="/images/icons8-instagram.svg" alt="Instagram" className="w-5 h-5" />
-                    <span className="text-gray-500">@{sublet.instagramHandle}</span>
+                    <span className="text-gray-500 truncate">@{sublet.instagramHandle}</span>
                   </a>
                 )}
                 {sublet.snapchatHandle && (
@@ -292,10 +292,10 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}
-                    className="flex items-center space-x-2 hover:opacity-70 transition-opacity"
+                    className="flex items-center gap-2 hover:opacity-70 transition-opacity"
                   >
                     <img src="/images/icons8-snapchat.svg" alt="Snapchat" className="w-5 h-5" />
-                    <span className="text-gray-500">@{sublet.snapchatHandle}</span>
+                    <span className="text-gray-500 truncate">@{sublet.snapchatHandle}</span>
                   </a>
                 )}
               </div>
