@@ -12,11 +12,14 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     outDir: 'dist',
+    assetsDir: 'assets',
+    emptyOutDir: true,
     rollupOptions: {
       output: {
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-        }
+        },
+        assetFileNames: 'assets/[name].[hash].[ext]'
       }
     }
   },
