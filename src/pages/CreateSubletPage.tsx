@@ -29,6 +29,16 @@ import LocationAutocomplete from "@/components/LocationAutocomplete";
 // Define Northeastern University coordinates
 const NEU_COORDINATES = { lat: 42.3398, lng: -71.0892 };
 
+// Add custom element type for Google Maps Place Autocomplete Element
+// @ts-ignore
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'gmpx-place-autocomplete': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & { placeholder?: string };
+    }
+  }
+}
+
 const CreateSubletPage = () => {
   const { currentUser } = useAuth();
   const { addSublet, uploadPhoto } = useSublet();
@@ -63,6 +73,15 @@ const CreateSubletPage = () => {
   // Ref for the Google Places input
   const googlePlacesInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Add state to track if Google Maps and the custom element are ready
+  const [mapsReady, setMapsReady] = useState(false);
+
+  // Flag to toggle new autocomplete (set to true for production, false for localhost fallback)
+  const useNewAutocomplete = !(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+  // Ref for classic input
+  const classicInputRef = useRef<HTMLInputElement | null>(null);
+
   useEffect(() => {
     if (!currentUser) {
       navigate('/auth');
@@ -90,9 +109,9 @@ const CreateSubletPage = () => {
     return parseFloat(price) * months;
   }, [startDate, endDate, price]);
 
-  // Effect to load Google Maps script and initialize Places Autocomplete
+  // Classic Autocomplete fallback effect
   useEffect(() => {
-    // Helper to load the script
+    if (useNewAutocomplete) return;
     function loadScript(src: string, id: string) {
       if (document.getElementById(id)) return;
       const script = document.createElement('script');
@@ -101,25 +120,18 @@ const CreateSubletPage = () => {
       script.async = true;
       document.body.appendChild(script);
     }
-
-    // Only run if window.google is not present
-    if (!(window as any).google || !(window as any).google.maps) {
-      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-      loadScript(
-        `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`,
-        'google-maps-script'
-      );
-    }
-
-    // Wait for script to load, then initialize autocomplete
-    function initAutocomplete() {
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+    loadScript(
+      `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`,
+      'google-maps-script-classic'
+    );
+    function initClassicAutocomplete() {
       if (!(window as any).google || !(window as any).google.maps || !(window as any).google.maps.places) {
-        setTimeout(initAutocomplete, 300);
+        setTimeout(initClassicAutocomplete, 300);
         return;
       }
-      const input = document.getElementById('google-places-autocomplete-input') as HTMLInputElement;
+      const input = classicInputRef.current;
       if (!input) return;
-      googlePlacesInputRef.current = input;
       const autocomplete = new (window as any).google.maps.places.Autocomplete(input, {
         types: ['geocode'],
         componentRestrictions: { country: 'us' },
@@ -145,8 +157,8 @@ const CreateSubletPage = () => {
         }
       });
     }
-    setTimeout(initAutocomplete, 500);
-  }, []);
+    setTimeout(initClassicAutocomplete, 500);
+  }, [useNewAutocomplete]);
 
   // Update handlePlaceSelect to accept the newer Place type
   const handlePlaceSelect = useCallback((place: google.maps.places.Place | null, distanceInMiles: number | null) => {
@@ -495,6 +507,21 @@ const CreateSubletPage = () => {
     }
   };
 
+  useEffect(() => {
+    function checkReady() {
+      if (
+        (window as any).google &&
+        (window as any).google.maps &&
+        customElements.get('gmpx-place-autocomplete')
+      ) {
+        setMapsReady(true);
+      } else {
+        setTimeout(checkReady, 200);
+      }
+    }
+    checkReady();
+  }, []);
+
   if (!currentUser) return null;
 
   return (
@@ -577,16 +604,24 @@ const CreateSubletPage = () => {
             <label htmlFor="location" className="text-sm font-medium">
               Location
             </label>
-            {/* Google Places Autocomplete input will be inserted here */}
-            <input
-              id="google-places-autocomplete-input"
-              type="text"
-              className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neu-red"
-              placeholder="Start typing and select an address from the suggestions."
-              value={locationInputValue}
-              onChange={e => setLocationInputValue(e.target.value)}
-              autoComplete="off"
-            />
+            <div className="w-full">
+              {useNewAutocomplete && mapsReady ? (
+                <gmpx-place-autocomplete
+                  id="google-places-autocomplete-element"
+                  placeholder="Start typing and select an address from the suggestions."
+                ></gmpx-place-autocomplete>
+              ) : (
+                <input
+                  ref={classicInputRef}
+                  type="text"
+                  className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neu-red"
+                  placeholder="Start typing and select an address from the suggestions."
+                  value={locationInputValue}
+                  onChange={e => setLocationInputValue(e.target.value)}
+                  autoComplete="off"
+                />
+              )}
+            </div>
             <p className="text-xs text-gray-500 mt-1">
               Start typing and select an address from the suggestions.
             </p>
