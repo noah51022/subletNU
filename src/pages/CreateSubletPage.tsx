@@ -516,12 +516,8 @@ const CreateSubletPage = () => {
             <label htmlFor="location" className="text-sm font-medium">
               Location
             </label>
-            <LocationAutocomplete
-              onPlaceSelect={handlePlaceSelect}
-              inputValue={locationInputValue} // Pass state value
-              setInputValue={setLocationInputValue} // Pass state setter
-              destinationCoordinates={NEU_COORDINATES}
-            />
+            {/* Google Places Autocomplete input will be inserted here */}
+            <div id="google-places-autocomplete-container"></div>
             <p className="text-xs text-gray-500 mt-1">
               Start typing and select an address from the suggestions.
             </p>
