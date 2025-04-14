@@ -76,11 +76,28 @@ const CreateSubletPage = () => {
   // Add state to track if Google Maps and the custom element are ready
   const [mapsReady, setMapsReady] = useState(false);
 
+  // Fallback state if new autocomplete fails
+  const [forceClassicAutocomplete, setForceClassicAutocomplete] = useState(false);
+
   // Flag to toggle new autocomplete (set to true for production, false for localhost fallback)
-  const useNewAutocomplete = !(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  const useNewAutocomplete = !forceClassicAutocomplete && !(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
 
   // Ref for classic input
   const classicInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Detect if new autocomplete is not interactive and fallback
+  useEffect(() => {
+    if (!useNewAutocomplete) return;
+    // Wait a bit for the element to render and initialize
+    const timeout = setTimeout(() => {
+      const el = document.getElementById('google-places-autocomplete-element');
+      // Check if the element exists and has a shadowRoot (should have if initialized)
+      if (!el || !(el as any).shadowRoot || !(el as any).shadowRoot.querySelector('input')) {
+        setForceClassicAutocomplete(true);
+      }
+    }, 2000);
+    return () => clearTimeout(timeout);
+  }, [useNewAutocomplete]);
 
   useEffect(() => {
     if (!currentUser) {
