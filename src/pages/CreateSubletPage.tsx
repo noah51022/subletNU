@@ -60,6 +60,9 @@ const CreateSubletPage = () => {
   // const turnstileRef = useRef<HTMLDivElement>(null);
   // const widgetIdRef = useRef<string | null>(null);
 
+  // Ref for the Google Places input
+  const googlePlacesInputRef = useRef<HTMLInputElement | null>(null);
+
   useEffect(() => {
     if (!currentUser) {
       navigate('/auth');
@@ -86,6 +89,64 @@ const CreateSubletPage = () => {
     // Calculate total
     return parseFloat(price) * months;
   }, [startDate, endDate, price]);
+
+  // Effect to load Google Maps script and initialize Places Autocomplete
+  useEffect(() => {
+    // Helper to load the script
+    function loadScript(src: string, id: string) {
+      if (document.getElementById(id)) return;
+      const script = document.createElement('script');
+      script.src = src;
+      script.id = id;
+      script.async = true;
+      document.body.appendChild(script);
+    }
+
+    // Only run if window.google is not present
+    if (!(window as any).google || !(window as any).google.maps) {
+      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+      loadScript(
+        `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`,
+        'google-maps-script'
+      );
+    }
+
+    // Wait for script to load, then initialize autocomplete
+    function initAutocomplete() {
+      if (!(window as any).google || !(window as any).google.maps || !(window as any).google.maps.places) {
+        setTimeout(initAutocomplete, 300);
+        return;
+      }
+      const input = document.getElementById('google-places-autocomplete-input') as HTMLInputElement;
+      if (!input) return;
+      googlePlacesInputRef.current = input;
+      const autocomplete = new (window as any).google.maps.places.Autocomplete(input, {
+        types: ['geocode'],
+        componentRestrictions: { country: 'us' },
+      });
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (place && place.formatted_address && place.geometry && place.geometry.location) {
+          setLocationInputValue(place.formatted_address);
+          // Calculate distance from NEU
+          const placeLat = place.geometry.location.lat();
+          const placeLng = place.geometry.location.lng();
+          const R = 3958.8; // Radius of Earth in miles
+          const dLat = (NEU_COORDINATES.lat - placeLat) * Math.PI / 180;
+          const dLng = (NEU_COORDINATES.lng - placeLng) * Math.PI / 180;
+          const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(placeLat * Math.PI / 180) *
+            Math.cos(NEU_COORDINATES.lat * Math.PI / 180) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          const distance = R * c;
+          setDistanceFromNEU(distance.toFixed(1));
+        }
+      });
+    }
+    setTimeout(initAutocomplete, 500);
+  }, []);
 
   // Update handlePlaceSelect to accept the newer Place type
   const handlePlaceSelect = useCallback((place: google.maps.places.Place | null, distanceInMiles: number | null) => {
@@ -517,7 +578,15 @@ const CreateSubletPage = () => {
               Location
             </label>
             {/* Google Places Autocomplete input will be inserted here */}
-            <div id="google-places-autocomplete-container"></div>
+            <input
+              id="google-places-autocomplete-input"
+              type="text"
+              className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neu-red"
+              placeholder="Start typing and select an address from the suggestions."
+              value={locationInputValue}
+              onChange={e => setLocationInputValue(e.target.value)}
+              autoComplete="off"
+            />
             <p className="text-xs text-gray-500 mt-1">
               Start typing and select an address from the suggestions.
             </p>
