@@ -378,8 +378,18 @@ const CreateSubletPage = () => {
     try {
       // Only send captcha token in production
       const verifyCaptchaToken = import.meta.env.MODE !== 'development' ? captchaToken : undefined;
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       if (verifyCaptchaToken) {
-        const verifyResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-captcha`, {
+        if (!supabaseUrl) {
+          toast({
+            title: "Configuration Error",
+            description: "Supabase URL is not set. Please contact support.",
+            variant: "destructive",
+          });
+          setIsSubmitting(false);
+          return;
+        }
+        const verifyResponse = await fetch(`${supabaseUrl}/functions/v1/verify-captcha`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

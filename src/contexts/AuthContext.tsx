@@ -125,8 +125,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Verify captcha token if provided
     if (metadata?.captcha_token) {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      if (!supabaseUrl) {
+        toast({
+          title: "Configuration Error",
+          description: "Supabase URL is not set. Please contact support.",
+          variant: "destructive",
+        });
+        return false;
+      }
       try {
-        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-captcha`, {
+        const response = await fetch(`${supabaseUrl}/functions/v1/verify-captcha`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
