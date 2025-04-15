@@ -66,7 +66,6 @@ serve(async (req) => {
                 View Message
               </a>
             </p>
-            <p><small>Note: This is a test email. In production, this would be sent to: ${receiverProfile.email}</small></p>
           </div>
         `,
       }),
