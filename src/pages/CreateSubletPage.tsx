@@ -497,30 +497,32 @@ const CreateSubletPage = () => {
   if (!currentUser) return null;
 
   return (
-    <div className="pb-20 mx-auto w-full max-w-[90%] md:max-w-4xl lg:max-w-6xl">
-      <header className="bg-neu-red text-white p-4 flex items-center rounded-b-lg justify-between">
-        <div className="flex items-center">
-          {isMobile && (
-            <button
-              className="mr-2 p-2 rounded focus:outline-none focus:ring-2 focus:ring-white"
-              onClick={() => setDrawerOpen(true)}
-              aria-label="Open menu"
+    <>
+      <div className="flex flex-col w-full">
+        <header className="bg-neu-red text-white p-4 flex items-center justify-between w-full" style={{ borderRadius: 0 }}>
+          <div className="flex items-center">
+            {isMobile && (
+              <button
+                className="mr-2 p-2 rounded focus:outline-none focus:ring-2 focus:ring-white"
+                onClick={() => setDrawerOpen(true)}
+                aria-label="Open menu"
+              >
+                <MenuIcon size={28} />
+              </button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-neu-red/80"
+              onClick={() => navigate('/')}
             >
-              <MenuIcon size={28} />
-            </button>
-          )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-white hover:bg-neu-red/80"
-            onClick={() => navigate('/')}
-          >
-            <ArrowLeft />
-          </Button>
-        </div>
-        <h1 className="text-xl font-bold ml-2 flex-1 text-center">Post a Sublet</h1>
-        {isMobile && <div style={{ width: 40 }} />}
-      </header>
+              <ArrowLeft />
+            </Button>
+          </div>
+          <h1 className="text-xl font-bold ml-2 flex-1 text-center">Post a Sublet</h1>
+          {isMobile && <div style={{ width: 40 }} />}
+        </header>
+      </div>
       {/* Hamburger Drawer for mobile */}
       {isMobile && (
         <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
@@ -545,304 +547,306 @@ const CreateSubletPage = () => {
           </DrawerContent>
         </Drawer>
       )}
-      <div className="p-4 md:p-6 lg:p-8">
-        <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl mx-auto">
-          {/* ... photos, price ... */}
-          {/* Photos Div */}
-          <div>
-            <h2 className="text-lg font-bold mb-4">Photos (1-5)</h2>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileSelect}
-              accept="image/*"
-              multiple
-              style={{ display: 'none' }}
-              id="photo-upload"
-            />
-            <div className="grid grid-cols-3 gap-2">
-              {photoPreviews.map((previewUrl, index) => (
-                <div key={index} className="relative aspect-square rounded overflow-hidden group">
-                  <img src={previewUrl} alt={`Sublet Preview ${index}`} className="w-full h-full object-cover" />
+      <div className="pb-20 mx-auto w-full max-w-[90%] md:max-w-4xl lg:max-w-6xl">
+        <div className="p-4 md:p-6 lg:p-8">
+          <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl mx-auto">
+            {/* ... photos, price ... */}
+            {/* Photos Div */}
+            <div>
+              <h2 className="text-lg font-bold mb-4">Photos (1-5)</h2>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                accept="image/*"
+                multiple
+                style={{ display: 'none' }}
+                id="photo-upload"
+              />
+              <div className="grid grid-cols-3 gap-2">
+                {photoPreviews.map((previewUrl, index) => (
+                  <div key={index} className="relative aspect-square rounded overflow-hidden group">
+                    <img src={previewUrl} alt={`Sublet Preview ${index}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePhoto(index)}
+                      className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                      aria-label="Remove photo"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ))}
+                {photoFiles.length < 5 && (
                   <button
                     type="button"
-                    onClick={() => handleRemovePhoto(index)}
-                    className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                    aria-label="Remove photo"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="aspect-square rounded border-2 border-dashed border-gray-300 flex items-center justify-center hover:border-neu-red cursor-pointer"
                   >
-                    <X size={16} />
+                    <ImagePlus className="text-gray-400" />
                   </button>
-                </div>
-              ))}
-              {photoFiles.length < 5 && (
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="aspect-square rounded border-2 border-dashed border-gray-300 flex items-center justify-center hover:border-neu-red cursor-pointer"
-                >
-                  <ImagePlus className="text-gray-400" />
-                </button>
+                )}
+              </div>
+              {photoFiles.length === 0 && (
+                <p className="text-sm text-gray-500 mt-2">Add at least one photo (required)</p>
               )}
+              <p className="text-xs text-gray-500 mt-1">
+                {photoFiles.length}/5 photos added.
+              </p>
             </div>
-            {photoFiles.length === 0 && (
-              <p className="text-sm text-gray-500 mt-2">Add at least one photo (required)</p>
-            )}
-            <p className="text-xs text-gray-500 mt-1">
-              {photoFiles.length}/5 photos added.
-            </p>
-          </div>
-          {/* Price Div */}
-          <div className="space-y-2">
-            <label htmlFor="price" className="text-sm font-medium">
-              Price ($/month)
-            </label>
-            <Input
-              id="price"
-              type="number"
-              placeholder="e.g., 750"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              required
-              max="6000"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="location" className="text-sm font-medium">
-              Location
-            </label>
-            <div className="w-full">
-              {useNewAutocomplete && mapsReady ? (
-                <gmpx-place-autocomplete
-                  id="google-places-autocomplete-element"
-                  placeholder="Start typing and select an address from the suggestions."
-                ></gmpx-place-autocomplete>
-              ) : (
-                <input
-                  ref={classicInputRef}
-                  type="text"
-                  className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neu-red"
-                  placeholder="Start typing and select an address from the suggestions."
-                  value={locationInputValue}
-                  onChange={e => setLocationInputValue(e.target.value)}
-                  autoComplete="off"
-                />
-              )}
-            </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Start typing and select an address from the suggestions.
-            </p>
-          </div>
-
-          {/* ... distance, gender, etc. ... */}
-          {/* Distance Div */}
-          <div className="space-y-2">
-            <label htmlFor="distance" className="text-sm font-medium">
-              Distance from Northeastern (miles)
-            </label>
-            <Input
-              id="distance"
-              type="number"
-              step="0.1"
-              min="0"
-              placeholder="e.g., 0.5 (auto-calculates)"
-              value={distanceFromNEU}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value === "" || parseFloat(value) >= 0) {
-                  setDistanceFromNEU(value);
-                }
-              }}
-              required
-            />
-            <p className="text-xs text-gray-500">Calculated automatically. Adjust if needed.</p>
-          </div>
-          {/* Gender Preference Div */}
-          <div className="space-y-2">
-            <label htmlFor="genderPreference" className="text-sm font-medium">
-              Gender Preference
-            </label>
-            <Select
-              value={genderPreference}
-              onValueChange={(value) => setGenderPreference(value as "male" | "female" | "any")}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select gender preference" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="any">Open to All</SelectItem>
-                <SelectItem value="male">For Guys</SelectItem>
-                <SelectItem value="female">For Girls</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {/* Pricing Type Div */}
-          <div className="space-y-2">
-            <label htmlFor="pricingType" className="text-sm font-medium">
-              Pricing Type
-            </label>
-            <Select
-              value={pricingType}
-              onValueChange={(value) => setPricingType(value as "firm" | "negotiable")}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select pricing type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="firm">Firm Price</SelectItem>
-                <SelectItem value="negotiable">Negotiable Price</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {/* Broker's Fee Div */}
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="brokersFee"
-              checked={noBrokersFee}
-              onCheckedChange={() => setNoBrokersFee(!noBrokersFee)}
-            />
-            <label
-              htmlFor="brokersFee"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            >
-              No Broker's Fee
-            </label>
-          </div>
-          {/* Amenities Div */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">
-              Amenities
-            </label>
-            <AmenitiesSelector
-              selectedAmenities={amenities}
-              onChange={setAmenities}
-            />
-          </div>
-          {/* Dates Div */}
-          <div className="grid grid-cols-2 gap-4">
+            {/* Price Div */}
             <div className="space-y-2">
-              <label className="text-sm font-medium">Start Date</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "MMM d, yyyy") : "Select date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={startDate}
-                    onSelect={setStartDate}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
+              <label htmlFor="price" className="text-sm font-medium">
+                Price ($/month)
+              </label>
+              <Input
+                id="price"
+                type="number"
+                placeholder="e.g., 750"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                required
+                max="6000"
+              />
             </div>
+
             <div className="space-y-2">
-              <label className="text-sm font-medium">End Date</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "MMM d, yyyy") : "Select date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={endDate}
-                    onSelect={setEndDate}
-                    initialFocus
-                    className="p-3 pointer-events-auto"
+              <label htmlFor="location" className="text-sm font-medium">
+                Location
+              </label>
+              <div className="w-full">
+                {useNewAutocomplete && mapsReady ? (
+                  <gmpx-place-autocomplete
+                    id="google-places-autocomplete-element"
+                    placeholder="Start typing and select an address from the suggestions."
+                  ></gmpx-place-autocomplete>
+                ) : (
+                  <input
+                    ref={classicInputRef}
+                    type="text"
+                    className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neu-red"
+                    placeholder="Start typing and select an address from the suggestions."
+                    value={locationInputValue}
+                    onChange={e => setLocationInputValue(e.target.value)}
+                    autoComplete="off"
                   />
-                </PopoverContent>
-              </Popover>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Start typing and select an address from the suggestions.
+              </p>
             </div>
-          </div>
-          {/* Total Cost Display */}
-          {totalCost !== null && (
-            <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
-              <div className="text-sm text-gray-600">Estimated Total Cost:</div>
-              <div className="text-xl font-bold text-neu-red">${totalCost.toFixed(2)}</div>
-              <div className="text-xs text-gray-500">
-                Based on ${price}/month for {differenceInCalendarMonths(endDate!, startDate!) + 1} month(s)
+
+            {/* ... distance, gender, etc. ... */}
+            {/* Distance Div */}
+            <div className="space-y-2">
+              <label htmlFor="distance" className="text-sm font-medium">
+                Distance from Northeastern (miles)
+              </label>
+              <Input
+                id="distance"
+                type="number"
+                step="0.1"
+                min="0"
+                placeholder="e.g., 0.5 (auto-calculates)"
+                value={distanceFromNEU}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "" || parseFloat(value) >= 0) {
+                    setDistanceFromNEU(value);
+                  }
+                }}
+                required
+              />
+              <p className="text-xs text-gray-500">Calculated automatically. Adjust if needed.</p>
+            </div>
+            {/* Gender Preference Div */}
+            <div className="space-y-2">
+              <label htmlFor="genderPreference" className="text-sm font-medium">
+                Gender Preference
+              </label>
+              <Select
+                value={genderPreference}
+                onValueChange={(value) => setGenderPreference(value as "male" | "female" | "any")}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select gender preference" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="any">Open to All</SelectItem>
+                  <SelectItem value="male">For Guys</SelectItem>
+                  <SelectItem value="female">For Girls</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Pricing Type Div */}
+            <div className="space-y-2">
+              <label htmlFor="pricingType" className="text-sm font-medium">
+                Pricing Type
+              </label>
+              <Select
+                value={pricingType}
+                onValueChange={(value) => setPricingType(value as "firm" | "negotiable")}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select pricing type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="firm">Firm Price</SelectItem>
+                  <SelectItem value="negotiable">Negotiable Price</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Broker's Fee Div */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="brokersFee"
+                checked={noBrokersFee}
+                onCheckedChange={() => setNoBrokersFee(!noBrokersFee)}
+              />
+              <label
+                htmlFor="brokersFee"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                No Broker's Fee
+              </label>
+            </div>
+            {/* Amenities Div */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">
+                Amenities
+              </label>
+              <AmenitiesSelector
+                selectedAmenities={amenities}
+                onChange={setAmenities}
+              />
+            </div>
+            {/* Dates Div */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Start Date</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {startDate ? format(startDate, "MMM d, yyyy") : "Select date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={startDate}
+                      onSelect={setStartDate}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">End Date</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {endDate ? format(endDate, "MMM d, yyyy") : "Select date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={endDate}
+                      onSelect={setEndDate}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
-          )}
-          {/* Description Div */}
-          <div className="space-y-2">
-            <label htmlFor="description" className="text-sm font-medium">
-              Description (max 600 characters)
-            </label>
-            <Textarea
-              id="description"
-              placeholder="Describe your sublet..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              maxLength={600}
-              rows={4}
-              required
-            />
-            <p className="text-xs text-gray-500 text-right">
-              {description.length}/600
-            </p>
-          </div>
-          {/* Add Social Media Inputs */}
-          <div className="space-y-4 pt-4 border-t">
-            <h3 className="text-md font-semibold text-gray-700">Social Media (Optional)</h3>
-            <p className="text-xs text-gray-500">Add your Instagram or Snapchat so interested people can reach out.</p>
+            {/* Total Cost Display */}
+            {totalCost !== null && (
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
+                <div className="text-sm text-gray-600">Estimated Total Cost:</div>
+                <div className="text-xl font-bold text-neu-red">${totalCost.toFixed(2)}</div>
+                <div className="text-xs text-gray-500">
+                  Based on ${price}/month for {differenceInCalendarMonths(endDate!, startDate!) + 1} month(s)
+                </div>
+              </div>
+            )}
+            {/* Description Div */}
             <div className="space-y-2">
-              <label htmlFor="instagramHandle" className="text-sm font-medium">
-                Instagram Username
+              <label htmlFor="description" className="text-sm font-medium">
+                Description (max 600 characters)
               </label>
-              <Input
-                id="instagramHandle"
-                placeholder="e.g., northeastern"
-                value={instagramHandle}
-                onChange={(e) => setInstagramHandle(e.target.value.replace(/[^a-zA-Z0-9_.]/g, ''))} // Basic validation
-                maxLength={30}
+              <Textarea
+                id="description"
+                placeholder="Describe your sublet..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                maxLength={600}
+                rows={4}
+                required
               />
+              <p className="text-xs text-gray-500 text-right">
+                {description.length}/600
+              </p>
             </div>
-            <div className="space-y-2">
-              <label htmlFor="snapchatHandle" className="text-sm font-medium">
-                Snapchat Username
-              </label>
-              <Input
-                id="snapchatHandle"
-                placeholder="e.g., northeasternu"
-                value={snapchatHandle}
-                onChange={(e) => setSnapchatHandle(e.target.value.replace(/[^a-zA-Z0-9_.-]/g, ''))} // Basic validation
-                maxLength={15}
-              />
+            {/* Add Social Media Inputs */}
+            <div className="space-y-4 pt-4 border-t">
+              <h3 className="text-md font-semibold text-gray-700">Social Media (Optional)</h3>
+              <p className="text-xs text-gray-500">Add your Instagram or Snapchat so interested people can reach out.</p>
+              <div className="space-y-2">
+                <label htmlFor="instagramHandle" className="text-sm font-medium">
+                  Instagram Username
+                </label>
+                <Input
+                  id="instagramHandle"
+                  placeholder="e.g., northeastern"
+                  value={instagramHandle}
+                  onChange={(e) => setInstagramHandle(e.target.value.replace(/[^a-zA-Z0-9_.]/g, ''))} // Basic validation
+                  maxLength={30}
+                />
+              </div>
+              <div className="space-y-2">
+                <label htmlFor="snapchatHandle" className="text-sm font-medium">
+                  Snapchat Username
+                </label>
+                <Input
+                  id="snapchatHandle"
+                  placeholder="e.g., northeasternu"
+                  value={snapchatHandle}
+                  onChange={(e) => setSnapchatHandle(e.target.value.replace(/[^a-zA-Z0-9_.-]/g, ''))} // Basic validation
+                  maxLength={15}
+                />
+              </div>
             </div>
-          </div>
-          {/* CAPTCHA widget for sublet creation (only in production) */}
-          {import.meta.env.MODE !== 'development' && (
-            <div className="flex justify-center mb-4">
-              <div ref={turnstileRef} className="cf-turnstile-sublet" />
-            </div>
-          )}
-          {/* Submit Button */}
-          <Button
-            type="submit"
-            className="w-full bg-neu-red hover:bg-neu-red/90"
-            disabled={isSubmitting || (import.meta.env.MODE !== 'development' && !captchaToken)}
-          >
-            {isSubmitting ? "Posting..." : "Post Sublet"}
-          </Button>
-        </form>
+            {/* CAPTCHA widget for sublet creation (only in production) */}
+            {import.meta.env.MODE !== 'development' && (
+              <div className="flex justify-center mb-4">
+                <div ref={turnstileRef} className="cf-turnstile-sublet" />
+              </div>
+            )}
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              className="w-full bg-neu-red hover:bg-neu-red/90"
+              disabled={isSubmitting || (import.meta.env.MODE !== 'development' && !captchaToken)}
+            >
+              {isSubmitting ? "Posting..." : "Post Sublet"}
+            </Button>
+          </form>
+        </div>
+        {/* Only show BottomNav on desktop/tablet */}
+        {!isMobile && <BottomNav />}
       </div>
-      {/* Only show BottomNav on desktop/tablet */}
-      {!isMobile && <BottomNav />}
-    </div>
+    </>
   );
 };
 

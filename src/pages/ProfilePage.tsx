@@ -212,173 +212,177 @@ const ProfilePage = () => {
   };
 
   return (
-    <div className="pb-20 mx-auto w-full max-w-[90%] md:max-w-4xl lg:max-w-6xl">
-      <header className="bg-neu-red text-white p-4 flex justify-between items-center rounded-b-lg">
-        <div className="flex items-center">
-          {isMobile && (
-            <button
-              className="mr-2 p-2 rounded focus:outline-none focus:ring-2 focus:ring-white"
-              onClick={() => setDrawerOpen(true)}
-              aria-label="Open menu"
-            >
-              <MenuIcon size={28} />
-            </button>
-          )}
-          <h1 className="text-xl font-bold flex-1 text-center">Profile</h1>
-        </div>
-        <Button
-          variant="ghost"
-          onClick={handleLogout}
-          className="text-white hover:bg-red-800"
-        >
-          <LogOut size={18} className="mr-2" />
-          Log out
-        </Button>
-        {isMobile && <div style={{ width: 40 }} />}
-      </header>
-      {/* Hamburger Drawer for mobile */}
-      {isMobile && (
-        <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
-          <DrawerContent>
-            <DrawerHeader>
-              <h2 className="text-lg font-bold mb-4">Menu</h2>
-              <nav className="flex flex-col gap-4">
-                <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/'); }}>
-                  <Home size={22} /> Home
-                </button>
-                <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/create'); }}>
-                  <PlusCircle size={22} /> Post
-                </button>
-                <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/messages'); }}>
-                  <MessageSquare size={22} /> Messages
-                </button>
-                <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/profile'); }}>
-                  <User size={22} /> Profile
-                </button>
-              </nav>
-            </DrawerHeader>
-          </DrawerContent>
-        </Drawer>
-      )}
-      <div className="p-4 md:p-6 lg:p-8">
-        <div className="max-w-3xl mx-auto">
-          <div className="mb-6 flex items-center">
-            <div className="h-16 w-16 mr-4 flex items-center justify-center bg-gray-200 rounded-full">
-              <span className="text-xl font-semibold text-gray-600">{getInitials()}</span>
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold">{getDisplayName()}</h2>
-              <p className="text-gray-600">{currentUser.email}</p>
+    <>
+      <div className="flex flex-col w-full">
+        <header className="bg-neu-red text-white p-4 flex justify-between items-center w-full" style={{ borderRadius: 0 }}>
+          <div className="flex items-center">
+            {isMobile && (
+              <button
+                className="mr-2 p-2 rounded focus:outline-none focus:ring-2 focus:ring-white"
+                onClick={() => setDrawerOpen(true)}
+                aria-label="Open menu"
+              >
+                <MenuIcon size={28} />
+              </button>
+            )}
+            <h1 className="text-xl font-bold flex-1 text-center">Profile</h1>
+          </div>
+          <Button
+            variant="ghost"
+            onClick={handleLogout}
+            className="text-white hover:bg-red-800"
+          >
+            <LogOut size={18} className="mr-2" />
+            Log out
+          </Button>
+          {isMobile && <div style={{ width: 40 }} />}
+        </header>
+        {/* Hamburger Drawer for mobile */}
+        {isMobile && (
+          <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+            <DrawerContent>
+              <DrawerHeader>
+                <h2 className="text-lg font-bold mb-4">Menu</h2>
+                <nav className="flex flex-col gap-4">
+                  <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/'); }}>
+                    <Home size={22} /> Home
+                  </button>
+                  <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/create'); }}>
+                    <PlusCircle size={22} /> Post
+                  </button>
+                  <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/messages'); }}>
+                    <MessageSquare size={22} /> Messages
+                  </button>
+                  <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/profile'); }}>
+                    <User size={22} /> Profile
+                  </button>
+                </nav>
+              </DrawerHeader>
+            </DrawerContent>
+          </Drawer>
+        )}
+        <div className="pb-20 mx-auto w-full max-w-[90%] md:max-w-4xl lg:max-w-6xl">
+          <div className="p-4 md:p-6 lg:p-8">
+            <div className="max-w-3xl mx-auto">
+              <div className="mb-6 flex items-center">
+                <div className="h-16 w-16 mr-4 flex items-center justify-center bg-gray-200 rounded-full">
+                  <span className="text-xl font-semibold text-gray-600">{getInitials()}</span>
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold">{getDisplayName()}</h2>
+                  <p className="text-gray-600">{currentUser.email}</p>
+                </div>
+              </div>
+
+              <Tabs defaultValue="listings" className="w-full">
+                <TabsList className="w-full mb-4">
+                  <TabsTrigger value="listings" className="flex-1">My Listings</TabsTrigger>
+                  <TabsTrigger value="settings" className="flex-1">Account Settings</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="listings">
+                  <div className="my-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-medium">Your Sublet Listings</h3>
+                      <Button
+                        onClick={() => navigate('/create')}
+                        className="bg-neu-red hover:bg-red-800"
+                      >
+                        Create New Listing
+                      </Button>
+                    </div>
+
+                    {isLoading ? (
+                      <div className="flex justify-center items-center py-12">
+                        <Loader2 className="h-8 w-8 animate-spin text-neu-red" />
+                      </div>
+                    ) : myListings.length === 0 ? (
+                      <div className="text-center py-8 bg-gray-50 rounded-lg">
+                        <p className="text-gray-500">You haven't posted any listings yet.</p>
+                        <Button
+                          onClick={() => navigate('/create')}
+                          className="mt-4 bg-neu-red hover:bg-red-800"
+                        >
+                          Create Your First Listing
+                        </Button>
+                      </div>
+                    ) : (
+                      <div>
+                        {myListings.map((listing) => (
+                          <ProfileListingCard
+                            key={listing.id}
+                            sublet={listing}
+                            onDelete={handleDeleteListing}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="settings">
+                  <div className="space-y-4">
+                    <div className="p-4 border rounded-lg">
+                      <h3 className="font-medium mb-2">Personal Information</h3>
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        <div>
+                          <p className="text-xs text-gray-500">First Name</p>
+                          <p className="text-sm">{userProfile?.first_name || 'Not set'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Last Name</p>
+                          <p className="text-sm">{userProfile?.last_name || 'Not set'}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Email Address</p>
+                        <p className="text-sm">{currentUser.email}</p>
+                      </div>
+                    </div>
+
+                    <div className="p-4 border rounded-lg">
+                      <h3 className="font-medium mb-2">Email Verification</h3>
+                      <p className="text-xs text-gray-500 mb-2">
+                        {currentUser.verified ?
+                          "Your email has been verified." :
+                          "Please check your inbox to verify your email address."
+                        }
+                      </p>
+                    </div>
+
+                    <div className="p-4 border rounded-lg">
+                      <h3 className="font-medium mb-2">Account Actions</h3>
+                      <Button
+                        variant="destructive"
+                        onClick={handleLogout}
+                      >
+                        <LogOut size={16} className="mr-2" />
+                        Sign Out
+                      </Button>
+                    </div>
+
+                    <div className="p-4 border rounded-lg bg-red-50">
+                      <h3 className="font-medium mb-2 text-red-700">Danger Zone</h3>
+                      <p className="text-sm text-red-600 mb-3">This action cannot be undone. All your data will be permanently deleted.</p>
+                      <Button
+                        variant="destructive"
+                        onClick={handleDeleteAccount}
+                        className="w-full bg-red-600 hover:bg-red-700"
+                      >
+                        <Trash2 size={16} className="mr-2" />
+                        Delete Account
+                      </Button>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </div>
           </div>
-
-          <Tabs defaultValue="listings" className="w-full">
-            <TabsList className="w-full mb-4">
-              <TabsTrigger value="listings" className="flex-1">My Listings</TabsTrigger>
-              <TabsTrigger value="settings" className="flex-1">Account Settings</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="listings">
-              <div className="my-4">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-medium">Your Sublet Listings</h3>
-                  <Button
-                    onClick={() => navigate('/create')}
-                    className="bg-neu-red hover:bg-red-800"
-                  >
-                    Create New Listing
-                  </Button>
-                </div>
-
-                {isLoading ? (
-                  <div className="flex justify-center items-center py-12">
-                    <Loader2 className="h-8 w-8 animate-spin text-neu-red" />
-                  </div>
-                ) : myListings.length === 0 ? (
-                  <div className="text-center py-8 bg-gray-50 rounded-lg">
-                    <p className="text-gray-500">You haven't posted any listings yet.</p>
-                    <Button
-                      onClick={() => navigate('/create')}
-                      className="mt-4 bg-neu-red hover:bg-red-800"
-                    >
-                      Create Your First Listing
-                    </Button>
-                  </div>
-                ) : (
-                  <div>
-                    {myListings.map((listing) => (
-                      <ProfileListingCard
-                        key={listing.id}
-                        sublet={listing}
-                        onDelete={handleDeleteListing}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="settings">
-              <div className="space-y-4">
-                <div className="p-4 border rounded-lg">
-                  <h3 className="font-medium mb-2">Personal Information</h3>
-                  <div className="grid grid-cols-2 gap-2 mb-3">
-                    <div>
-                      <p className="text-xs text-gray-500">First Name</p>
-                      <p className="text-sm">{userProfile?.first_name || 'Not set'}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-gray-500">Last Name</p>
-                      <p className="text-sm">{userProfile?.last_name || 'Not set'}</p>
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Email Address</p>
-                    <p className="text-sm">{currentUser.email}</p>
-                  </div>
-                </div>
-
-                <div className="p-4 border rounded-lg">
-                  <h3 className="font-medium mb-2">Email Verification</h3>
-                  <p className="text-xs text-gray-500 mb-2">
-                    {currentUser.verified ?
-                      "Your email has been verified." :
-                      "Please check your inbox to verify your email address."
-                    }
-                  </p>
-                </div>
-
-                <div className="p-4 border rounded-lg">
-                  <h3 className="font-medium mb-2">Account Actions</h3>
-                  <Button
-                    variant="destructive"
-                    onClick={handleLogout}
-                  >
-                    <LogOut size={16} className="mr-2" />
-                    Sign Out
-                  </Button>
-                </div>
-
-                <div className="p-4 border rounded-lg bg-red-50">
-                  <h3 className="font-medium mb-2 text-red-700">Danger Zone</h3>
-                  <p className="text-sm text-red-600 mb-3">This action cannot be undone. All your data will be permanently deleted.</p>
-                  <Button
-                    variant="destructive"
-                    onClick={handleDeleteAccount}
-                    className="w-full bg-red-600 hover:bg-red-700"
-                  >
-                    <Trash2 size={16} className="mr-2" />
-                    Delete Account
-                  </Button>
-                </div>
-              </div>
-            </TabsContent>
-          </Tabs>
+          {/* Only show BottomNav on desktop/tablet */}
+          {!isMobile && <BottomNav />}
         </div>
       </div>
-      {/* Only show BottomNav on desktop/tablet */}
-      {!isMobile && <BottomNav />}
-    </div>
+    </>
   );
 };
 
