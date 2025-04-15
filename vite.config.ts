@@ -12,13 +12,13 @@ export default defineConfig(({ mode }) => ({
     strictPort: true,
     headers: {
       'Content-Security-Policy': [
-        "default-src 'self'",
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://cdn.gpteng.co https://*.googleapis.com https://maps.googleapis.com",
+        "default-src 'self' https://subletnu.vercel.app",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://cdn.gpteng.co https://*.googleapis.com https://maps.googleapis.com https://subletnu.vercel.app",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-        "img-src 'self' data: blob: https: https://*.googleapis.com https://*.gstatic.com",
+        "img-src 'self' data: blob: https: https://*.googleapis.com https://*.gstatic.com https://subletnu.vercel.app",
         "font-src 'self' https://fonts.gstatic.com",
-        "connect-src 'self' https://*.supabase.co wss://*.supabase.co http://localhost:* http://0.0.0.0:* http://127.0.0.1:* http://192.168.*.*:* ws://localhost:* ws://0.0.0.0:* ws://127.0.0.1:* ws://192.168.*.*:* https://*.googleapis.com",
-        "frame-src 'self'",
+        "connect-src 'self' https://*.supabase.co wss://*.supabase.co http://localhost:* http://0.0.0.0:* http://127.0.0.1:* http://192.168.*.*:* ws://localhost:* ws://0.0.0.0:* ws://127.0.0.1:* ws://192.168.*.*:* https://*.googleapis.com https://subletnu.vercel.app",
+        "frame-src 'self' https://subletnu.vercel.app",
         "media-src 'self'",
       ].join('; '),
     },
