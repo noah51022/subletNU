@@ -58,8 +58,9 @@ const CreateSubletPage = () => {
   const [amenities, setAmenities] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [noBrokersFee, setNoBrokersFee] = useState(false);
-  // CAPTCHA: Commented out for development
-  // const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const turnstileRef = useRef<HTMLDivElement>(null);
+  const widgetIdRef = useRef<string | null>(null);
   // Add state for social media handles
   const [instagramHandle, setInstagramHandle] = useState("");
   const [snapchatHandle, setSnapchatHandle] = useState("");
@@ -68,9 +69,6 @@ const CreateSubletPage = () => {
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // CAPTCHA: Commented out for development
-  // const turnstileRef = useRef<HTMLDivElement>(null);
-  // const widgetIdRef = useRef<string | null>(null);
 
   // Ref for the Google Places input
   const googlePlacesInputRef = useRef<HTMLInputElement | null>(null);
@@ -273,120 +271,64 @@ const CreateSubletPage = () => {
     setPhotoPreviews(prev => prev.filter((_, index) => index !== indexToRemove));
   };
 
-  // CAPTCHA: Commented out for development
-  /*
-  // Handle Turnstile callback
-  const handleCaptchaCallback = useCallback((token: string) => {
-    console.log("Captcha callback received");
-    setCaptchaToken(token);
-  }, []);
-
-  // Initialize or reset Turnstile
-  const initTurnstile = useCallback(() => {
-    if (turnstileRef.current) {
+  // Initialize Turnstile only in production
+  useEffect(() => {
+    if (import.meta.env.MODE === 'development') return;
+    let mounted = true;
+    let retryCount = 0;
+    const maxRetries = 5;
+    const initTurnstile = () => {
+      if (!mounted || !turnstileRef.current) return;
+      if (typeof window.turnstile === 'undefined') {
+        if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(initTurnstile, 1000);
+        }
+        return;
+      }
       try {
-        // Clean up previous widget if it exists
-        if (widgetIdRef.current && window.turnstile) {
+        if (widgetIdRef.current) {
           window.turnstile.remove(widgetIdRef.current);
           widgetIdRef.current = null;
-          setCaptchaToken(null);
         }
-
-        const initWidget = () => {
-          if (!window.turnstile) {
-            console.log("Waiting for Turnstile to load...");
-            setTimeout(initWidget, 500);
-            return;
-          }
-
-          if (!turnstileRef.current || widgetIdRef.current) {
-            return; // Don't initialize if ref is gone or widget already exists
-          }
-
-          console.log("Initializing Turnstile with site key:", import.meta.env.VITE_CAPTCHA_SITE_KEY);
-
-          try {
-            widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
-              sitekey: import.meta.env.VITE_CAPTCHA_SITE_KEY,
-              callback: (token) => {
-                console.log("Turnstile verification successful");
-                setCaptchaToken(token);
-              },
-              'refresh-expired': 'manual',
-              theme: 'light',
-              'error-callback': (error) => {
-                console.error("Turnstile error:", error);
-                setCaptchaToken(null);
-                // Only reset if the widget still exists
-                if (widgetIdRef.current && window.turnstile) {
-                  try {
-                    window.turnstile.reset(widgetIdRef.current);
-                  } catch (e) {
-                    console.error("Error resetting widget:", e);
-                    // If reset fails, remove and reinit
-                    window.turnstile.remove(widgetIdRef.current);
-                    widgetIdRef.current = null;
-                    setTimeout(initWidget, 1000);
-                  }
-                }
-              },
-              'expired-callback': () => {
-                console.log("Turnstile token expired");
-                setCaptchaToken(null);
-                if (widgetIdRef.current && window.turnstile) {
-                  window.turnstile.reset(widgetIdRef.current);
-                }
-              }
-            });
-          } catch (error) {
-            console.error("Error during widget render:", error);
-            widgetIdRef.current = null;
-            setTimeout(initWidget, 1000);
-          }
-        };
-
-        // Start initialization process
-        initWidget();
+        widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
+          sitekey: import.meta.env.VITE_CAPTCHA_SITE_KEY,
+          callback: function (token: string) {
+            if (mounted) setCaptchaToken(token);
+          },
+          'error-callback': function () {
+            if (mounted) setCaptchaToken(null);
+          },
+          'expired-callback': function () {
+            if (mounted) setCaptchaToken(null);
+          },
+          theme: 'light',
+          appearance: 'always',
+        });
       } catch (error) {
-        console.error("Error in initTurnstile:", error);
-        widgetIdRef.current = null;
-        setTimeout(initTurnstile, 1000);
+        if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(initTurnstile, 1000);
+        }
       }
-    }
-  }, []);
-
-  // Cleanup function
-  const cleanup = useCallback(() => {
-    if (widgetIdRef.current && window.turnstile) {
-      try {
-        window.turnstile.remove(widgetIdRef.current);
-        widgetIdRef.current = null;
-        setCaptchaToken(null);
-      } catch (error) {
-        console.error("Error cleaning up Turnstile:", error);
-      }
-    }
-  }, []);
-
-  // Initialize Turnstile when component mounts
-  useEffect(() => {
-    // Initial delay to ensure script has started loading
-    const timer = setTimeout(initTurnstile, 1000);
-
-    return () => {
-      clearTimeout(timer);
-      cleanup();
     };
-  }, [initTurnstile, cleanup]);
-  */
+    const timer = setTimeout(initTurnstile, 500);
+    return () => {
+      mounted = false;
+      clearTimeout(timer);
+      if (widgetIdRef.current) {
+        try {
+          window.turnstile.remove(widgetIdRef.current);
+        } catch (e) { }
+        widgetIdRef.current = null;
+      }
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // CAPTCHA: Commented out for development
-    /*
-    // Add check for captcha token
-    if (!captchaToken) {
+    // Only require CAPTCHA in production
+    if (import.meta.env.MODE !== 'development' && !captchaToken) {
       toast({
         title: "Verification Required",
         description: "Please complete the captcha verification.",
@@ -394,7 +336,6 @@ const CreateSubletPage = () => {
       });
       return;
     }
-    */
 
     // Add check for distance field being filled (either auto or manual)
     if (!distanceFromNEU) {
@@ -435,34 +376,33 @@ const CreateSubletPage = () => {
     setIsSubmitting(true);
 
     try {
-      // CAPTCHA: Commented out for development
-      /*
-      // Verify captcha token
-      const verifyResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-captcha`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          token: captchaToken,
-        }),
-      });
-
-      const verifyResult = await verifyResponse.json();
-      if (!verifyResult.success) {
-        toast({
-          title: "Verification Failed",
-          description: "Please complete the captcha verification again.",
-          variant: "destructive",
+      // Only send captcha token in production
+      const verifyCaptchaToken = import.meta.env.MODE !== 'development' ? captchaToken : undefined;
+      if (verifyCaptchaToken) {
+        const verifyResponse = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-captcha`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            token: verifyCaptchaToken,
+          }),
         });
-        if (window.turnstile) {
-          window.turnstile.reset();
+        const verifyResult = await verifyResponse.json();
+        if (!verifyResult.success) {
+          toast({
+            title: "Verification Failed",
+            description: "Please complete the captcha verification again.",
+            variant: "destructive",
+          });
+          if (window.turnstile && widgetIdRef.current) {
+            window.turnstile.reset(widgetIdRef.current);
+          }
+          setIsSubmitting(false);
+          return;
         }
-        setIsSubmitting(false);
-        return;
       }
-      */
 
       // Add user check
       if (!currentUser) {
@@ -874,15 +814,17 @@ const CreateSubletPage = () => {
               />
             </div>
           </div>
-          {/* CAPTCHA: Commented out for development */}
-          {/* <div className="flex justify-center mb-4">
-            <div ref={turnstileRef} className="cf-turnstile-sublet" />
-          </div> */}
+          {/* CAPTCHA widget for sublet creation (only in production) */}
+          {import.meta.env.MODE !== 'development' && (
+            <div className="flex justify-center mb-4">
+              <div ref={turnstileRef} className="cf-turnstile-sublet" />
+            </div>
+          )}
           {/* Submit Button */}
           <Button
             type="submit"
             className="w-full bg-neu-red hover:bg-neu-red/90"
-            disabled={isSubmitting /* || !captchaToken */}
+            disabled={isSubmitting || (import.meta.env.MODE !== 'development' && !captchaToken)}
           >
             {isSubmitting ? "Posting..." : "Post Sublet"}
           </Button>
