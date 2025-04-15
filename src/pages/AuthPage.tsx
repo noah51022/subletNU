@@ -13,91 +13,70 @@ const AuthPage = () => {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  // CAPTCHA: Commented out for development
-  // const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  // const turnstileRef = useRef<HTMLDivElement>(null);
-  // const widgetIdRef = useRef<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const turnstileRef = useRef<HTMLDivElement>(null);
+  const widgetIdRef = useRef<string | null>(null);
   const { login, register, currentUser } = useAuth();
   const navigate = useNavigate();
 
-  // CAPTCHA: Commented out for development
-  /* 
-  // Initialize Turnstile
+  // Initialize Turnstile only in production
   useEffect(() => {
+    if (import.meta.env.MODE === 'development') return;
     let mounted = true;
     let retryCount = 0;
     const maxRetries = 5;
 
     const initTurnstile = () => {
       if (!mounted || !turnstileRef.current || isLogin) return;
-
       if (typeof window.turnstile === 'undefined') {
         if (retryCount < maxRetries) {
-          console.log(`Waiting for Turnstile to load... (attempt ${retryCount + 1}/${maxRetries})`);
           retryCount++;
           setTimeout(initTurnstile, 1000);
         }
         return;
       }
-
-      console.log("Initializing Turnstile");
-
       try {
-        // Cleanup any existing widget
         if (widgetIdRef.current) {
           window.turnstile.remove(widgetIdRef.current);
           widgetIdRef.current = null;
         }
-
-        // Render new widget
         widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
           sitekey: import.meta.env.VITE_CAPTCHA_SITE_KEY,
           callback: function (token: string) {
-            console.log("Turnstile verification successful");
             if (mounted) setCaptchaToken(token);
           },
           'error-callback': function () {
-            console.error("Turnstile error");
             if (mounted) setCaptchaToken(null);
           },
           'expired-callback': function () {
-            console.log("Turnstile expired");
             if (mounted) setCaptchaToken(null);
           },
           theme: 'light',
-          appearance: 'always'
+          appearance: 'always',
         });
       } catch (error) {
-        console.error("Error initializing Turnstile:", error);
         if (retryCount < maxRetries) {
           retryCount++;
           setTimeout(initTurnstile, 1000);
         }
       }
     };
-
-    // Start initialization with a small delay
     const timer = setTimeout(initTurnstile, 500);
-
     return () => {
       mounted = false;
       clearTimeout(timer);
       if (widgetIdRef.current) {
         try {
           window.turnstile.remove(widgetIdRef.current);
-        } catch (e) {
-          console.warn("Error cleaning up Turnstile:", e);
-        }
+        } catch (e) { }
         widgetIdRef.current = null;
       }
     };
   }, [isLogin]);
 
-  // Reset widget when switching modes
   useEffect(() => {
     setCaptchaToken(null);
   }, [isLogin]);
-  */
 
   // Redirect if already logged in
   useEffect(() => {
@@ -108,7 +87,6 @@ const AuthPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!email.endsWith('@northeastern.edu')) {
       toast({
         title: "Invalid Email",
@@ -117,11 +95,8 @@ const AuthPage = () => {
       });
       return;
     }
-
-    // CAPTCHA: Commented out for development
-    /*
-    // Check for captcha token when signing up
-    if (!isLogin && !captchaToken) {
+    // Only require CAPTCHA in production and for sign up
+    if (import.meta.env.MODE !== 'development' && !isLogin && !captchaToken) {
       toast({
         title: "Verification Required",
         description: "Please complete the captcha verification.",
@@ -129,10 +104,7 @@ const AuthPage = () => {
       });
       return;
     }
-    */
-
     setIsLoading(true);
-
     try {
       if (isLogin) {
         const success = await login(email, password);
@@ -144,8 +116,7 @@ const AuthPage = () => {
         const success = await register(email, password, {
           first_name: firstName,
           last_name: lastName,
-          // CAPTCHA: Commented out for development
-          // captcha_token: captchaToken
+          captcha_token: import.meta.env.MODE !== 'development' ? captchaToken || undefined : undefined,
         });
         if (success) {
           toast({
@@ -254,17 +225,17 @@ const AuthPage = () => {
                 )}
               </div>
 
-              {/* CAPTCHA: Commented out for development */}
-              {/* {!isLogin && (
+              {/* CAPTCHA widget for sign up (only in production) */}
+              {!isLogin && import.meta.env.MODE !== 'development' && (
                 <div className="flex justify-center">
                   <div ref={turnstileRef} className="cf-turnstile" />
                 </div>
-              )} */}
+              )}
 
               <Button
                 type="submit"
                 className="w-full bg-neu-red hover:bg-neu-red/90"
-                disabled={isLoading /* || (!isLogin && !captchaToken) */}
+                disabled={isLoading || (!isLogin && import.meta.env.MODE !== 'development' && !captchaToken)}
               >
                 {isLoading ? "Processing..." : isLogin ? "Log In" : "Sign Up"}
               </Button>

@@ -13,7 +13,7 @@ export default defineConfig(({ mode }) => ({
     headers: {
       'Content-Security-Policy': [
         "default-src 'self'",
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.googleapis.com https://maps.googleapis.com",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://cdn.gpteng.co https://*.googleapis.com https://maps.googleapis.com",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "img-src 'self' data: blob: https: https://*.googleapis.com https://*.gstatic.com",
         "font-src 'self' https://fonts.gstatic.com",
