@@ -5,10 +5,12 @@ import BottomNav from "@/components/BottomNav";
 import ProfileListingCard from "@/components/ProfileListingCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { LogOut, Loader2, User, Trash2 } from "lucide-react";
+import { LogOut, Loader2, User, Trash2, Menu as MenuIcon, Home, PlusCircle, MessageSquare } from "lucide-react";
 import { Sublet } from "../types";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Drawer, DrawerContent, DrawerHeader } from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const ProfilePage = () => {
   const { currentUser, logout } = useAuth();
@@ -16,6 +18,8 @@ const ProfilePage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<{ first_name: string | null, last_name: string | null } | null>(null);
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (!currentUser) {
@@ -210,7 +214,18 @@ const ProfilePage = () => {
   return (
     <div className="pb-20 mx-auto w-full max-w-[90%] md:max-w-4xl lg:max-w-6xl">
       <header className="bg-neu-red text-white p-4 flex justify-between items-center rounded-b-lg">
-        <h1 className="text-xl font-bold">Profile</h1>
+        <div className="flex items-center">
+          {isMobile && (
+            <button
+              className="mr-2 p-2 rounded focus:outline-none focus:ring-2 focus:ring-white"
+              onClick={() => setDrawerOpen(true)}
+              aria-label="Open menu"
+            >
+              <MenuIcon size={28} />
+            </button>
+          )}
+          <h1 className="text-xl font-bold flex-1 text-center">Profile</h1>
+        </div>
         <Button
           variant="ghost"
           onClick={handleLogout}
@@ -219,8 +234,32 @@ const ProfilePage = () => {
           <LogOut size={18} className="mr-2" />
           Log out
         </Button>
+        {isMobile && <div style={{ width: 40 }} />}
       </header>
-
+      {/* Hamburger Drawer for mobile */}
+      {isMobile && (
+        <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+          <DrawerContent>
+            <DrawerHeader>
+              <h2 className="text-lg font-bold mb-4">Menu</h2>
+              <nav className="flex flex-col gap-4">
+                <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/'); }}>
+                  <Home size={22} /> Home
+                </button>
+                <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/create'); }}>
+                  <PlusCircle size={22} /> Post
+                </button>
+                <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/messages'); }}>
+                  <MessageSquare size={22} /> Messages
+                </button>
+                <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/profile'); }}>
+                  <User size={22} /> Profile
+                </button>
+              </nav>
+            </DrawerHeader>
+          </DrawerContent>
+        </Drawer>
+      )}
       <div className="p-4 md:p-6 lg:p-8">
         <div className="max-w-3xl mx-auto">
           <div className="mb-6 flex items-center">
@@ -337,8 +376,8 @@ const ProfilePage = () => {
           </Tabs>
         </div>
       </div>
-
-      <BottomNav />
+      {/* Only show BottomNav on desktop/tablet */}
+      {!isMobile && <BottomNav />}
     </div>
   );
 };

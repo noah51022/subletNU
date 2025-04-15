@@ -6,9 +6,11 @@ import { useMessage } from "@/contexts/MessageContext";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, Send, Menu as MenuIcon, Home, PlusCircle, MessageSquare, User } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { Drawer, DrawerContent, DrawerHeader } from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type UserProfile = {
   id: string;
@@ -35,6 +37,8 @@ const MessagesPage = () => {
   } = useMessage();
   const navigate = useNavigate();
   const location = useLocation();
+  const isMobile = useIsMobile();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const [newMessage, setNewMessage] = useState("");
   const [activeUser, setActiveUser] = useState<string | null>(userId || null);
@@ -158,10 +162,43 @@ const MessagesPage = () => {
   if (!activeUser && !userId) {
     return (
       <div className="pb-20 mx-auto w-full max-w-[90%] md:max-w-4xl lg:max-w-6xl">
-        <header className="bg-neu-red text-white p-4 rounded-b-lg">
-          <h1 className="text-xl font-bold">Messages</h1>
+        <header className="bg-neu-red text-white p-4 rounded-b-lg flex items-center justify-between">
+          {isMobile && (
+            <button
+              className="mr-2 p-2 rounded focus:outline-none focus:ring-2 focus:ring-white"
+              onClick={() => setDrawerOpen(true)}
+              aria-label="Open menu"
+            >
+              <MenuIcon size={28} />
+            </button>
+          )}
+          <h1 className="text-xl font-bold flex-1 text-center">Messages</h1>
+          {isMobile && <div style={{ width: 40 }} />}
         </header>
-
+        {/* Hamburger Drawer for mobile */}
+        {isMobile && (
+          <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+            <DrawerContent>
+              <DrawerHeader>
+                <h2 className="text-lg font-bold mb-4">Menu</h2>
+                <nav className="flex flex-col gap-4">
+                  <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/'); }}>
+                    <Home size={22} /> Home
+                  </button>
+                  <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/create'); }}>
+                    <PlusCircle size={22} /> Post
+                  </button>
+                  <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/messages'); }}>
+                    <MessageSquare size={22} /> Messages
+                  </button>
+                  <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/profile'); }}>
+                    <User size={22} /> Profile
+                  </button>
+                </nav>
+              </DrawerHeader>
+            </DrawerContent>
+          </Drawer>
+        )}
         <div className="p-4">
           {contacts.length === 0 ? (
             <div className="text-center py-8">
@@ -217,24 +254,26 @@ const MessagesPage = () => {
             </div>
           )}
         </div>
-
-        <BottomNav />
+        {/* Only show BottomNav on desktop/tablet */}
+        {!isMobile && <BottomNav />}
       </div>
     );
   }
 
   return (
     <div className="pb-20 h-screen flex flex-col mx-auto w-full max-w-[90%] md:max-w-4xl lg:max-w-6xl">
-      <header className="bg-neu-red text-white p-4 flex items-center rounded-b-lg">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-white hover:bg-neu-red/80"
-          onClick={handleBackClick}
-        >
-          <ArrowLeft />
-        </Button>
-        <div className="ml-2">
+      <header className="bg-neu-red text-white p-4 flex items-center rounded-b-lg justify-between">
+        <div className="flex items-center">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-white hover:bg-neu-red/80"
+            onClick={handleBackClick}
+          >
+            <ArrowLeft />
+          </Button>
+        </div>
+        <div className="flex-1 ml-2">
           <h1 className="text-lg font-bold">
             {activeUser ? getDisplayName(activeUser) : "Unknown User"}
           </h1>
@@ -244,8 +283,40 @@ const MessagesPage = () => {
             </p>
           )}
         </div>
+        {isMobile && (
+          <button
+            className="ml-2 p-2 rounded focus:outline-none focus:ring-2 focus:ring-white"
+            onClick={() => setDrawerOpen(true)}
+            aria-label="Open menu"
+          >
+            <MenuIcon size={28} />
+          </button>
+        )}
       </header>
-
+      {/* Hamburger Drawer for mobile */}
+      {isMobile && (
+        <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+          <DrawerContent>
+            <DrawerHeader>
+              <h2 className="text-lg font-bold mb-4">Menu</h2>
+              <nav className="flex flex-col gap-4">
+                <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/'); }}>
+                  <Home size={22} /> Home
+                </button>
+                <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/create'); }}>
+                  <PlusCircle size={22} /> Post
+                </button>
+                <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/messages'); }}>
+                  <MessageSquare size={22} /> Messages
+                </button>
+                <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/profile'); }}>
+                  <User size={22} /> Profile
+                </button>
+              </nav>
+            </DrawerHeader>
+          </DrawerContent>
+        </Drawer>
+      )}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {activeUserMessages.length === 0 ? (
           <div className="text-center py-8">
@@ -272,7 +343,6 @@ const MessagesPage = () => {
           ))
         )}
       </div>
-
       <div className="p-3 border-t bg-white">
         <form onSubmit={handleSendMessage} className="flex gap-2">
           <Input
@@ -291,8 +361,8 @@ const MessagesPage = () => {
           </Button>
         </form>
       </div>
-
-      <BottomNav />
+      {/* Only show BottomNav on desktop/tablet */}
+      {!isMobile && <BottomNav />}
     </div>
   );
 };

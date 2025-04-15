@@ -108,7 +108,7 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
     return (
       <Badge
         variant="outline"
-        className={`${info.className} border-none text-gray-700 font-medium`}
+        className={`${info.className} border-none text-gray-700 font-medium inline-flex w-auto whitespace-nowrap px-2 py-0.5`}
       >
         {info.label}
       </Badge>
@@ -119,7 +119,7 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
     return (
       <Badge
         variant="outline"
-        className={`${sublet.pricingType === 'negotiable' ? 'bg-green-100 hover:bg-green-100' : 'bg-gray-100 hover:bg-gray-100'} border-none text-gray-700 font-medium ml-1`}
+        className={`${sublet.pricingType === 'negotiable' ? 'bg-green-100 hover:bg-green-100' : 'bg-gray-100 hover:bg-gray-100'} border-none text-gray-700 font-medium inline-flex w-auto whitespace-nowrap px-2 py-0.5`}
       >
         {sublet.pricingType === 'negotiable' ? 'Negotiable Price' : 'Firm Price'}
       </Badge>
@@ -140,9 +140,10 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
           <Badge
             key={amenity}
             variant="outline"
-            className="bg-gray-50 text-xs px-1.5 py-0.5 border-none"
+            className="bg-gray-50 text-xs border-none rounded-md px-2 py-0.5 whitespace-nowrap min-w-0 w-auto max-w-full"
+            style={{ display: 'inline-block', lineHeight: '1.2', padding: '0 0.5rem', minWidth: 0, width: 'auto', maxWidth: '100%' }}
           >
-            {amenity}
+            <span className="inline-block whitespace-nowrap w-auto min-w-0 max-w-full" style={{ padding: 0 }}>{amenity}</span>
           </Badge>
         ))}
       </div>
@@ -231,47 +232,46 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
       </div>
 
       <div className={expanded ? "p-4" : "p-4"}>
-        <div className="flex justify-between items-start">
-          <div>
-            <div className="flex items-center flex-wrap gap-x-2 gap-y-1 mb-2">
-              <div className="text-xl font-bold text-neu-red">
-                ${sublet.price}/mo
-              </div>
+        {/* Top section: Price and badges */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 sm:gap-0">
+          <div className="flex flex-col gap-1">
+            <div className="text-xl font-bold text-neu-red">${sublet.price}/mo</div>
+            <div className="flex flex-row flex-nowrap items-center gap-2">
               {getGenderBadge()}
               {getPricingBadge()}
             </div>
-            <div className="text-sm text-gray-600 mb-2">
-              {getShortAddress(sublet.location)} • {sublet.distanceFromNEU} mi from NU • {formatDateRange()}
-            </div>
-            <div className="mt-2 text-gray-800 text-sm">
-              {expanded ? formatDescription(sublet.description) : getTruncatedDescription()}
-              {!expanded && shouldShowExpandButton() && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="mt-1 h-6 text-neu-red hover:text-neu-red/90 p-0"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsDescriptionExpanded(!isDescriptionExpanded);
-                  }}
-                >
-                  {isDescriptionExpanded ? (
-                    <>Show less <ChevronUp className="h-4 w-4 ml-1" /></>
-                  ) : (
-                    <>Show more <ChevronDown className="h-4 w-4 ml-1" /></>
-                  )}
-                </Button>
-              )}
-            </div>
-
-            {/* Display amenity badges */}
-            {getAmenityBadges()}
+          </div>
+          {/* Address, distance, and date info */}
+          <div className="text-sm text-gray-600 mt-1 sm:mt-0">
+            {getShortAddress(sublet.location)} • {sublet.distanceFromNEU} mi from NU • {formatDateRange()}
           </div>
         </div>
-
-        <div className="mt-4 flex justify-between items-center">
+        {/* Description */}
+        <div className="mt-2 text-gray-800 text-sm">
+          {expanded ? formatDescription(sublet.description) : getTruncatedDescription()}
+          {!expanded && shouldShowExpandButton() && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-1 h-6 text-neu-red hover:text-neu-red/90 p-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsDescriptionExpanded(!isDescriptionExpanded);
+              }}
+            >
+              {isDescriptionExpanded ? (
+                <>Show less <ChevronUp className="h-4 w-4 ml-1" /></>
+              ) : (
+                <>Show more <ChevronDown className="h-4 w-4 ml-1" /></>
+              )}
+            </Button>
+          )}
+        </div>
+        {/* Amenities */}
+        {getAmenityBadges()}
+        {/* Social/contact and message button */}
+        <div className="mt-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
           <div className="text-sm text-gray-600">
-            {/* Social Media Links */}
             {(sublet.instagramHandle || sublet.snapchatHandle) ? (
               <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                 {sublet.instagramHandle && (
@@ -303,11 +303,10 @@ const SubletCard = ({ sublet, expanded = false }: SubletCardProps) => {
               <span className="text-gray-500">Posted by: {sublet.userEmail}</span>
             )}
           </div>
-
           <Button
             variant="outline"
             size="sm"
-            className="text-neu-red border-neu-red hover:bg-neu-red hover:text-white"
+            className="text-neu-red border-neu-red hover:bg-neu-red hover:text-white w-full sm:w-auto mt-2 sm:mt-0"
             onClick={handleMessageClick}
           >
             <MessageSquare size={16} className="mr-1" />

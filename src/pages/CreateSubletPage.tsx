@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
-import { ArrowLeft, CalendarIcon, ImagePlus, X } from "lucide-react";
+import { ArrowLeft, CalendarIcon, ImagePlus, X, Menu as MenuIcon, Home, PlusCircle, MessageSquare, User } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -25,6 +25,8 @@ import { toast } from "@/hooks/use-toast";
 import { format, differenceInCalendarMonths } from "date-fns";
 import AmenitiesSelector from "@/components/AmenitiesSelector";
 import LocationAutocomplete from "@/components/LocationAutocomplete";
+import { Drawer, DrawerContent, DrawerHeader } from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Define Northeastern University coordinates
 const NEU_COORDINATES = { lat: 42.3398, lng: -71.0892 };
@@ -539,22 +541,60 @@ const CreateSubletPage = () => {
     checkReady();
   }, []);
 
+  const isMobile = useIsMobile();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
   if (!currentUser) return null;
 
   return (
     <div className="pb-20 mx-auto w-full max-w-[90%] md:max-w-4xl lg:max-w-6xl">
-      <header className="bg-neu-red text-white p-4 flex items-center rounded-b-lg">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-white hover:bg-neu-red/80"
-          onClick={() => navigate('/')}
-        >
-          <ArrowLeft />
-        </Button>
-        <h1 className="text-xl font-bold ml-2">Post a Sublet</h1>
+      <header className="bg-neu-red text-white p-4 flex items-center rounded-b-lg justify-between">
+        <div className="flex items-center">
+          {isMobile && (
+            <button
+              className="mr-2 p-2 rounded focus:outline-none focus:ring-2 focus:ring-white"
+              onClick={() => setDrawerOpen(true)}
+              aria-label="Open menu"
+            >
+              <MenuIcon size={28} />
+            </button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-white hover:bg-neu-red/80"
+            onClick={() => navigate('/')}
+          >
+            <ArrowLeft />
+          </Button>
+        </div>
+        <h1 className="text-xl font-bold ml-2 flex-1 text-center">Post a Sublet</h1>
+        {isMobile && <div style={{ width: 40 }} />}
       </header>
-
+      {/* Hamburger Drawer for mobile */}
+      {isMobile && (
+        <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
+          <DrawerContent>
+            <DrawerHeader>
+              <h2 className="text-lg font-bold mb-4">Menu</h2>
+              <nav className="flex flex-col gap-4">
+                <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/'); }}>
+                  <Home size={22} /> Home
+                </button>
+                <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/create'); }}>
+                  <PlusCircle size={22} /> Post
+                </button>
+                <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/messages'); }}>
+                  <MessageSquare size={22} /> Messages
+                </button>
+                <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/profile'); }}>
+                  <User size={22} /> Profile
+                </button>
+              </nav>
+            </DrawerHeader>
+          </DrawerContent>
+        </Drawer>
+      )}
       <div className="p-4 md:p-6 lg:p-8">
         <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl mx-auto">
           {/* ... photos, price ... */}
@@ -848,8 +888,8 @@ const CreateSubletPage = () => {
           </Button>
         </form>
       </div>
-
-      <BottomNav />
+      {/* Only show BottomNav on desktop/tablet */}
+      {!isMobile && <BottomNav />}
     </div>
   );
 };

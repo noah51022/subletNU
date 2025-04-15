@@ -21,6 +21,9 @@ import {
 } from "@/components/ui/select";
 import AmenitiesSelector from "@/components/AmenitiesSelector";
 
+export const TOP_BAR_HEIGHT = 64;
+export const FILTER_BAR_HEIGHT = 48;
+
 const FilterBar = () => {
   const {
     maxPrice,
@@ -80,8 +83,8 @@ const FilterBar = () => {
   };
 
   return (
-    <div className="filters-bar">
-      <div className="flex justify-between items-center">
+    <div className="filters-bar w-full bg-white shadow-sm mt-2">
+      <div className="flex justify-between items-center px-4">
         <h2 className="font-bold text-lg">Filters</h2>
         <Button
           variant="ghost"
@@ -91,9 +94,8 @@ const FilterBar = () => {
           {isExpanded ? 'Hide' : 'Show'}
         </Button>
       </div>
-
       {isExpanded && (
-        <div className="mt-2 space-y-4 animate-fade-in">
+        <div className="mt-2 space-y-4 animate-fade-in px-4 py-4 bg-white shadow-sm mt-0">
           <div>
             <label className="text-sm font-medium">Max Price: ${maxPrice}</label>
             <Slider
