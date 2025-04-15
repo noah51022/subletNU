@@ -53,7 +53,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: 'onboarding@resend.dev',
-        to: 'noah@torrez.us',
+        to: receiverProfile.email,
         subject: `New message from ${senderProfile.first_name}`,
         html: `
           <div>
@@ -61,7 +61,7 @@ serve(async (req) => {
             <p><strong>${senderProfile.first_name} ${senderProfile.last_name}</strong> sent you a message:</p>
             <p style="padding: 15px; background-color: #f5f5f5; border-radius: 5px;">${message.text}</p>
             <p>
-              <a href="http://localhost:8080/messages/${message.sender_id}" 
+              <a href="https://subletnu.vercel.app/messages/${message.sender_id}" 
                  style="padding: 10px 20px; background-color: #E31837; color: white; text-decoration: none; border-radius: 5px; display: inline-block;">
                 View Message
               </a>
