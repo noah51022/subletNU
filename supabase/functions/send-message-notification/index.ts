@@ -52,8 +52,9 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'onboarding@resend.dev',
+        from: 'no-reply@subletnu.vercel.app',
         to: receiverProfile.email,
+        reply_to: senderProfile.email,
         subject: `New message from ${senderProfile.first_name}`,
         html: `
           <div>
