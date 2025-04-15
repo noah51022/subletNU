@@ -60,14 +60,12 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
-## How can I deploy this project?
+## Security Items
 
-Simply open [Lovable](https://lovable.dev/projects/2a46d43b-4c0d-4c78-894b-1eea3e0d59c3) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes it is!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+-Input validation (frontend + backend/DB)
+-Rate limiting (can be revisited if needed)
+-CORS setup (production-only)
+-HTTPS only (handled by Vercel/Supabase)
+Auth (CAPTCHA, RLS, etc.)
+-Data (SQL injection, constraints, backups)
+-Frontend (no secrets, XSS, lazy loading, etc.)
