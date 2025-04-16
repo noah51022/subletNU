@@ -28,6 +28,7 @@ type MessageContextType = {
   fetchMessages: () => Promise<void>;
   markMessagesAsRead: (senderId: string) => Promise<void>;
   getUnreadCount: (userId: string) => number;
+  getTotalUnreadCount: () => number;
 };
 
 const MessageContext = createContext<MessageContextType | undefined>(undefined);
@@ -153,6 +154,14 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
       msg => msg.senderId === userId &&
         msg.receiverId === currentUser.id &&
         !msg.isRead
+    ).length;
+  };
+
+  const getTotalUnreadCount = (): number => {
+    if (!currentUser) return 0;
+
+    return messages.filter(
+      msg => msg.receiverId === currentUser.id && !msg.isRead
     ).length;
   };
 
@@ -420,6 +429,7 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     fetchMessages,
     markMessagesAsRead,
     getUnreadCount,
+    getTotalUnreadCount,
   };
 
   return <MessageContext.Provider value={value}>{children}</MessageContext.Provider>;

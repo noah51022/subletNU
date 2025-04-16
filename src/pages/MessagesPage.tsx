@@ -3,14 +3,11 @@ import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSublet } from "@/contexts/SubletContext";
 import { useMessage } from "@/contexts/MessageContext";
-import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Send, Menu as MenuIcon, Home, PlusCircle, MessageSquare, User } from "lucide-react";
+import { ArrowLeft, Send, MessageSquare } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
-import { Drawer, DrawerContent, DrawerHeader } from "@/components/ui/drawer";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 type UserProfile = {
   id: string;
@@ -33,19 +30,20 @@ const MessagesPage = () => {
     fetchMessages,
     markMessagesAsRead,
     getUnreadCount,
+    getTotalUnreadCount,
     isLoadingMessages,
     userProfiles
   } = useMessage();
   const navigate = useNavigate();
   const location = useLocation();
-  const isMobile = useIsMobile();
-  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const [newMessage, setNewMessage] = useState("");
   const [activeUser, setActiveUser] = useState<string | null>(userId || null);
   const [isFetching, setIsFetching] = useState(false);
 
   const subletId = location.state?.subletId;
+
+  const totalUnreadCount = getTotalUnreadCount();
 
   const getUniqueContacts = () => {
     if (!currentUser) return [];
@@ -169,165 +167,88 @@ const MessagesPage = () => {
   // Show conversation list if no conversation is selected
   if (!activeUser && !userId) {
     return (
-      <>
-        <div className="flex flex-col w-full">
-          <header className="bg-neu-red text-white p-4 flex items-center justify-between w-full" style={{ borderRadius: 0 }}>
-            {isMobile && (
-              <button
-                className="mr-2 p-2 rounded focus:outline-none focus:ring-2 focus:ring-white"
-                onClick={() => setDrawerOpen(true)}
-                aria-label="Open menu"
-              >
-                <MenuIcon size={28} />
-              </button>
-            )}
-            <h1 className="text-xl font-bold flex-1 text-center">Messages</h1>
-            {isMobile && <div style={{ width: 40 }} />}
-          </header>
-          {/* Hamburger Drawer for mobile */}
-          {isMobile && (
-            <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
-              <DrawerContent>
-                <DrawerHeader>
-                  <h2 className="text-lg font-bold mb-4">Menu</h2>
-                  <nav className="flex flex-col gap-4">
-                    <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/'); }}>
-                      <Home size={22} /> Home
-                    </button>
-                    <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/create'); }}>
-                      <PlusCircle size={22} /> Post
-                    </button>
-                    <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/messages'); }}>
-                      <MessageSquare size={22} /> Messages
-                    </button>
-                    <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/profile'); }}>
-                      <User size={22} /> Profile
-                    </button>
-                  </nav>
-                </DrawerHeader>
-              </DrawerContent>
-            </Drawer>
-          )}
-          <div className="p-4">
-            {contacts.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No conversations yet.</p>
-                <p className="text-gray-500">
-                  Start by messaging a sublet poster from the listings.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {contacts.map(contact => {
-                  const unreadCount = getUnreadCount(contact.id);
-                  return (
-                    <button
-                      key={contact.id}
-                      className="w-full p-4 bg-white rounded-lg shadow flex items-center hover:bg-gray-50"
-                      onClick={() => {
-                        navigate(`/messages/${contact.id}`, { state: { subletId } });
-                      }}
-                    >
-                      <div className="relative">
-                        <div className="w-12 h-12 rounded-full bg-neu-gold flex items-center justify-center text-white font-bold">
-                          {getInitials(contact.id)}
-                        </div>
-                        {unreadCount > 0 && (
-                          <div className="absolute -top-1 -right-1 bg-neu-red text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                            {unreadCount}
-                          </div>
-                        )}
-                      </div>
-                      <div className="ml-3 flex-1 text-left">
-                        <div className="flex justify-between items-start">
-                          <p className={`font-medium ${unreadCount > 0 ? 'text-neu-red' : ''}`}>
-                            {getDisplayName(contact.id)}
-                          </p>
-                          {contact.lastMessage && (
-                            <span className="text-xs text-gray-500">
-                              {formatDistanceToNow(new Date(contact.lastMessage.timestamp), { addSuffix: true })}
-                            </span>
-                          )}
-                        </div>
-                        {contact.lastMessage && (
-                          <p className={`text-sm truncate ${unreadCount > 0 ? 'text-black font-medium' : 'text-gray-500'}`}>
-                            {contact.lastMessage.senderId === currentUser.id ? "You: " : ""}
-                            {contact.lastMessage.text}
-                          </p>
-                        )}
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+      <div className="p-4">
+        {contacts.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500">No conversations yet.</p>
+            <p className="text-gray-500">
+              Start by messaging a sublet poster from the listings.
+            </p>
           </div>
-        </div>
-        {/* Only show BottomNav on desktop/tablet */}
-        {!isMobile && <BottomNav />}
-      </>
+        ) : (
+          <div className="space-y-2">
+            {contacts.map(contact => {
+              const unreadCount = getUnreadCount(contact.id);
+              return (
+                <button
+                  key={contact.id}
+                  className="w-full p-4 bg-white rounded-lg shadow flex items-center hover:bg-gray-50"
+                  onClick={() => {
+                    navigate(`/messages/${contact.id}`, { state: { subletId } });
+                  }}
+                >
+                  <div className="relative">
+                    <div className="w-12 h-12 rounded-full bg-neu-gold flex items-center justify-center text-white font-bold">
+                      {getInitials(contact.id)}
+                    </div>
+                    {unreadCount > 0 && (
+                      <div className="absolute -top-1 -right-1 bg-neu-red text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                        {unreadCount}
+                      </div>
+                    )}
+                  </div>
+                  <div className="ml-3 flex-1 text-left">
+                    <div className="flex justify-between items-start">
+                      <p className={`font-medium ${unreadCount > 0 ? 'text-neu-red' : ''}`}>
+                        {getDisplayName(contact.id)}
+                      </p>
+                      {contact.lastMessage && (
+                        <span className="text-xs text-gray-500">
+                          {formatDistanceToNow(new Date(contact.lastMessage.timestamp), { addSuffix: true })}
+                        </span>
+                      )}
+                    </div>
+                    {contact.lastMessage && (
+                      <p className={`text-sm truncate ${unreadCount > 0 ? 'text-black font-medium' : 'text-gray-500'}`}>
+                        {contact.lastMessage.senderId === currentUser.id ? "You: " : ""}
+                        {contact.lastMessage.text}
+                      </p>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
     );
   }
 
   // Show message thread if a conversation is selected
   return (
-    <div className="pb-20 h-screen flex flex-col mx-auto w-full max-w-[90%] md:max-w-4xl lg:max-w-6xl">
-      <header className="bg-neu-red text-white p-4 flex items-center justify-between w-full" style={{ borderRadius: 0 }}>
-        <div className="flex items-center">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-white hover:bg-neu-red/80"
-            onClick={handleBackClick}
-          >
-            <ArrowLeft />
-          </Button>
-        </div>
-        <div className="flex-1 ml-2">
-          <h1 className="text-lg font-bold">
+    <div className="h-full flex flex-col mx-auto w-full max-w-[90%] md:max-w-4xl lg:max-w-6xl">
+      <div className="flex items-center p-2 border-b">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-neu-red hover:bg-gray-100 mr-2"
+          onClick={handleBackClick}
+        >
+          <ArrowLeft />
+        </Button>
+        <div className="flex-1">
+          <h1 className="text-lg font-semibold">
             {activeUser ? getDisplayName(activeUser) : "Unknown User"}
           </h1>
           {activeUserSublet && (
-            <p className="text-xs opacity-80">
+            <p className="text-xs text-gray-500">
               {activeUserSublet.location} - ${activeUserSublet.price}/mo
             </p>
           )}
         </div>
-        {isMobile && (
-          <button
-            className="ml-2 p-2 rounded focus:outline-none focus:ring-2 focus:ring-white"
-            onClick={() => setDrawerOpen(true)}
-            aria-label="Open menu"
-          >
-            <MenuIcon size={28} />
-          </button>
-        )}
-      </header>
-      {/* Hamburger Drawer for mobile */}
-      {isMobile && (
-        <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
-          <DrawerContent>
-            <DrawerHeader>
-              <h2 className="text-lg font-bold mb-4">Menu</h2>
-              <nav className="flex flex-col gap-4">
-                <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/'); }}>
-                  <Home size={22} /> Home
-                </button>
-                <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/create'); }}>
-                  <PlusCircle size={22} /> Post
-                </button>
-                <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/messages'); }}>
-                  <MessageSquare size={22} /> Messages
-                </button>
-                <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/profile'); }}>
-                  <User size={22} /> Profile
-                </button>
-              </nav>
-            </DrawerHeader>
-          </DrawerContent>
-        </Drawer>
-      )}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
         {activeUserMessages.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-500">No messages yet.</p>
@@ -337,13 +258,13 @@ const MessagesPage = () => {
           activeUserMessages.map(msg => (
             <div
               key={msg.id}
-              className={`max-w-[75%] p-3 rounded-lg ${msg.senderId === currentUser.id
+              className={`max-w-[75%] p-3 rounded-lg shadow-sm ${msg.senderId === currentUser.id
                 ? "bg-neu-red text-white ml-auto"
-                : "bg-gray-200 text-black"
+                : "bg-white text-black"
                 }`}
             >
               <p>{msg.text}</p>
-              <p className="text-xs opacity-70 mt-1">
+              <p className="text-xs opacity-70 mt-1 text-right">
                 {new Date(msg.timestamp).toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit"
@@ -353,7 +274,7 @@ const MessagesPage = () => {
           ))
         )}
       </div>
-      <div className="p-3 border-t bg-white">
+      <div className="p-3 border-t bg-white sticky bottom-0">
         <form onSubmit={handleSendMessage} className="flex gap-2">
           <Input
             placeholder="Type a message..."
@@ -371,8 +292,6 @@ const MessagesPage = () => {
           </Button>
         </form>
       </div>
-      {/* Only show BottomNav on desktop/tablet */}
-      {!isMobile && <BottomNav />}
     </div>
   );
 };
