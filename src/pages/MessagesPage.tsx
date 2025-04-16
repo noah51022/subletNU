@@ -226,8 +226,8 @@ const MessagesPage = () => {
 
   // Show message thread if a conversation is selected
   return (
-    <div className="h-full flex flex-col mx-auto w-full max-w-[90%] md:max-w-4xl lg:max-w-6xl">
-      <div className="flex items-center p-2 border-b">
+    <div className="min-h-screen flex flex-col mx-auto w-full max-w-7xl bg-gray-100">
+      <div className="flex items-center p-2 border-b bg-white">
         <Button
           variant="ghost"
           size="icon"
@@ -248,7 +248,7 @@ const MessagesPage = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
+      <div className="flex-1 overflow-y-auto p-4 pb-[120px] space-y-3 bg-gray-50">
         {activeUserMessages.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-500">No messages yet.</p>
@@ -274,7 +274,7 @@ const MessagesPage = () => {
           ))
         )}
       </div>
-      <div className="p-3 border-t bg-white sticky bottom-0">
+      <div className="fixed left-0 right-0 bottom-[56px] z-30 p-3 border-t bg-white max-w-7xl mx-auto w-full">
         <form onSubmit={handleSendMessage} className="flex gap-2">
           <Input
             placeholder="Type a message..."
