@@ -173,7 +173,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           data: {
             first_name: metadata?.first_name,
             last_name: metadata?.last_name
-          }
+          },
+          emailRedirectTo: 'https://subletnu.com'
         }
       });
 
