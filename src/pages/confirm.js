@@ -14,6 +14,7 @@ const Confirm = () => {
 
   useEffect(() => {
     const confirmationUrl = searchParams.get('confirmation_url')
+    console.log('confirmationUrl:', confirmationUrl)
 
     if (!confirmationUrl) {
       setStatus('Missing confirmation URL.')
@@ -29,6 +30,8 @@ const Confirm = () => {
     }
     const token = url.searchParams.get('token')
     const type = url.searchParams.get('type')
+    console.log('Extracted token:', token)
+    console.log('Extracted type:', type)
 
     if (!token || !type) {
       setStatus('Missing token or type from confirmation URL.')
@@ -37,6 +40,7 @@ const Confirm = () => {
 
     const verify = async () => {
       const { data, error } = await supabase.auth.verifyOtp({ token, type })
+      console.log('verifyOtp response:', { data, error })
 
       if (error) {
         setStatus(`Verification failed: ${error.message}`)
