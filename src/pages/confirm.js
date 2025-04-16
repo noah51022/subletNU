@@ -50,7 +50,11 @@ const Confirm = () => {
       if (error) {
         setStatus(`Verification failed: ${error.message}`)
       } else {
-        setStatus('Email verified! Redirecting...')
+        if (data?.session) {
+          await supabase.auth.setSession(data.session)
+          console.log('Logged in with session:', data.session)
+        }
+        setStatus('Email verified and logged in! Redirecting...')
         setTimeout(() => navigate('/'), 3000)
       }
     }
