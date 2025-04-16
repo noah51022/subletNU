@@ -13,25 +13,36 @@ const Confirm = () => {
   const [status, setStatus] = useState('Verifying...')
 
   useEffect(() => {
-    const token = searchParams.get('token')
-    const type = searchParams.get('type')
+    const confirmationUrl = searchParams.get('confirmation_url')
+
+    if (!confirmationUrl) {
+      setStatus('Missing confirmation URL.')
+      return
+    }
+
+    let url
+    try {
+      url = new URL(confirmationUrl)
+    } catch (e) {
+      setStatus('Invalid confirmation URL.')
+      return
+    }
+    const token = url.searchParams.get('token')
+    const type = url.searchParams.get('type')
 
     if (!token || !type) {
-      setStatus('Missing verification token or type.')
+      setStatus('Missing token or type from confirmation URL.')
       return
     }
 
     const verify = async () => {
-      const { data, error } = await supabase.auth.verifyOtp({
-        token,
-        type
-      })
+      const { data, error } = await supabase.auth.verifyOtp({ token, type })
 
       if (error) {
         setStatus(`Verification failed: ${error.message}`)
       } else {
         setStatus('Email verified! Redirecting...')
-        setTimeout(() => navigate('/dashboard'), 3000)
+        setTimeout(() => navigate('/'), 3000)
       }
     }
 
