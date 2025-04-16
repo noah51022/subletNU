@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppProvider } from "@/contexts/AppContext";
-import MainLayout from "./components/MainLayout";
+
 
 // Pages
 import HomePage from "./pages/HomePage";
@@ -28,11 +28,11 @@ const App = () => {
             <Toaster />
             <Sonner />
             <Routes>
-              <Route path="/" element={<MainLayout><HomePage /></MainLayout>} />
-              <Route path="/create" element={<MainLayout><CreateSubletPage /></MainLayout>} />
-              <Route path="/messages" element={<MainLayout><MessagesPage /></MainLayout>} />
-              <Route path="/messages/:userId" element={<MainLayout><MessagesPage /></MainLayout>} />
-              <Route path="/profile" element={<MainLayout><ProfilePage /></MainLayout>} />
+              <Route path="/" element={<HomePage />} />
+              <Route path="/create" element={<CreateSubletPage />} />
+              <Route path="/messages" element={<MessagesPage />} />
+              <Route path="/messages/:userId" element={<MessagesPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/sublet/:subletId" element={<SubletDetailPage />} />
               <Route path="/edit/:subletId" element={<EditSubletPage />} />

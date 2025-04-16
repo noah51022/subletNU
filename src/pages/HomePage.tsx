@@ -5,11 +5,19 @@ import SubletCard from "@/components/SubletCard";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import BottomNav from "@/components/BottomNav";
+import { Drawer, DrawerContent, DrawerHeader } from "@/components/ui/drawer";
+import { Menu as MenuIcon, Home, PlusCircle, MessageSquare, User } from "lucide-react";
+import { useState } from "react";
+import Header from "@/components/Header";
 
 const HomePage = () => {
   const { currentUser } = useAuth();
   const { filteredSublets } = useFilter();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     // Remove redirect for unauthenticated users
@@ -19,25 +27,35 @@ const HomePage = () => {
   }, [currentUser, navigate]);
 
   return (
-    <div className="mx-auto w-full max-w-[90%] md:max-w-4xl lg:max-w-6xl">
-      <FilterBar />
-
-      <div className="mt-4 pb-4">
-        {filteredSublets === undefined ? (
-          <div className="flex justify-center items-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-neu-red" />
+    <div className="flex flex-col min-h-screen">
+      <Header title="Home" />
+      <main className="flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-[90%] md:max-w-4xl lg:max-w-6xl">
+          <FilterBar />
+          <div className="mt-4 pb-4">
+            {filteredSublets === undefined ? (
+              <div className="flex justify-center items-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-neu-red" />
+              </div>
+            ) : filteredSublets.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No sublets match your filters.</p>
+                <p className="text-gray-500">Try adjusting your filters or check back later.</p>
+              </div>
+            ) : (
+              filteredSublets.map((sublet) => (
+                <SubletCard key={sublet.id} sublet={sublet} />
+              ))
+            )}
           </div>
-        ) : filteredSublets.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-gray-500">No sublets match your filters.</p>
-            <p className="text-gray-500">Try adjusting your filters or check back later.</p>
-          </div>
-        ) : (
-          filteredSublets.map((sublet) => (
-            <SubletCard key={sublet.id} sublet={sublet} />
-          ))
-        )}
-      </div>
+        </div>
+      </main>
+      {/* Bottom Navigation for Desktop/Tablet */}
+      {!isMobile && (
+        <div className="sticky bottom-0 z-50">
+          <BottomNav />
+        </div>
+      )}
     </div>
   );
 };

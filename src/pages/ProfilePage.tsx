@@ -11,6 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Drawer, DrawerContent, DrawerHeader } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
+import Header from "@/components/Header";
 
 const ProfilePage = () => {
   const { currentUser, logout } = useAuth();
@@ -211,56 +212,20 @@ const ProfilePage = () => {
     return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || currentUser.email.charAt(0).toUpperCase();
   };
 
+  const logoutButton = (
+    <button
+      className="ml-4 p-2 rounded focus:outline-none focus:ring-2 focus:ring-white text-white hover:bg-red-800"
+      onClick={handleLogout}
+      aria-label="Log out"
+    >
+      <LogOut size={18} className="mr-2 inline" /> Log out
+    </button>
+  );
+
   return (
-    <>
-      <div className="flex flex-col w-full">
-        <header className="bg-neu-red text-white p-4 flex justify-between items-center w-full" style={{ borderRadius: 0 }}>
-          <div className="flex items-center">
-            {isMobile && (
-              <button
-                className="mr-2 p-2 rounded focus:outline-none focus:ring-2 focus:ring-white"
-                onClick={() => setDrawerOpen(true)}
-                aria-label="Open menu"
-              >
-                <MenuIcon size={28} />
-              </button>
-            )}
-            <h1 className="text-xl font-bold flex-1 text-center">Profile</h1>
-          </div>
-          <Button
-            variant="ghost"
-            onClick={handleLogout}
-            className="text-white hover:bg-red-800"
-          >
-            <LogOut size={18} className="mr-2" />
-            Log out
-          </Button>
-          {isMobile && <div style={{ width: 40 }} />}
-        </header>
-        {/* Hamburger Drawer for mobile */}
-        {isMobile && (
-          <Drawer open={drawerOpen} onOpenChange={setDrawerOpen}>
-            <DrawerContent>
-              <DrawerHeader>
-                <h2 className="text-lg font-bold mb-4">Menu</h2>
-                <nav className="flex flex-col gap-4">
-                  <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/'); }}>
-                    <Home size={22} /> Home
-                  </button>
-                  <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/create'); }}>
-                    <PlusCircle size={22} /> Post
-                  </button>
-                  <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/messages'); }}>
-                    <MessageSquare size={22} /> Messages
-                  </button>
-                  <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/profile'); }}>
-                    <User size={22} /> Profile
-                  </button>
-                </nav>
-              </DrawerHeader>
-            </DrawerContent>
-          </Drawer>
-        )}
+    <div className="flex flex-col min-h-screen">
+      <Header title="Profile" right={!isMobile ? logoutButton : undefined} />
+      <main className="flex-1 overflow-y-auto">
         <div className="pb-20 mx-auto w-full max-w-[90%] md:max-w-4xl lg:max-w-6xl">
           <div className="p-4 md:p-6 lg:p-8">
             <div className="max-w-3xl mx-auto">
@@ -378,11 +343,15 @@ const ProfilePage = () => {
               </Tabs>
             </div>
           </div>
-          {/* Only show BottomNav on desktop/tablet */}
-          {!isMobile && <BottomNav />}
         </div>
-      </div>
-    </>
+      </main>
+      {/* Bottom Navigation for Desktop/Tablet */}
+      {!isMobile && (
+        <div className="sticky bottom-0 z-50">
+          <BottomNav />
+        </div>
+      )}
+    </div>
   );
 };
 
