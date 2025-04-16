@@ -33,7 +33,8 @@ const MessagesPage = () => {
     fetchMessages,
     markMessagesAsRead,
     getUnreadCount,
-    isLoadingMessages
+    isLoadingMessages,
+    userProfiles
   } = useMessage();
   const navigate = useNavigate();
   const location = useLocation();
@@ -85,6 +86,7 @@ const MessagesPage = () => {
   };
 
   const contacts = getUniqueContacts();
+
   const activeUserMessages = activeUser ? getMessagesForUser(activeUser) : [];
   const activeUserSublet = activeUser ? sublets.find(s => s.userId === activeUser) : null;
 
@@ -124,18 +126,23 @@ const MessagesPage = () => {
     fetchData();
   }, [activeUser, currentUser?.id, fetchUserProfiles, fetchMessages, markMessagesAsRead, isFetching]);
 
-  // Fetch profiles for contacts
+  // Fetch missing profiles for contacts
   useEffect(() => {
-    if (!currentUser) {
-      navigate('/auth', { state: { fromProtected: true } });
-      return;
-    }
+    const missingContactIds = contacts
+      .map(c => c.id)
+      .filter(id => !userProfiles[id]);
 
-    const userIds = contacts.map(contact => contact.id);
-    if (userIds.length > 0) {
-      fetchUserProfiles(userIds);
+    if (missingContactIds.length > 0) {
+      fetchUserProfiles(missingContactIds);
     }
-  }, [currentUser, contacts, navigate, fetchUserProfiles]);
+  }, [contacts, fetchUserProfiles, userProfiles]);
+
+  // Fetch missing profile for active user
+  useEffect(() => {
+    if (activeUser && !userProfiles[activeUser]) {
+      fetchUserProfiles([activeUser]);
+    }
+  }, [activeUser, fetchUserProfiles, userProfiles]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();

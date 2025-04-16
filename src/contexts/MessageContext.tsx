@@ -38,7 +38,6 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
   const [userProfiles, setUserProfiles] = useState<Record<string, UserProfile>>({});
   const { currentUser } = useAuth();
 
-  // Memoize fetchMessages to prevent infinite subscription cycle
   const fetchMessages = useCallback(async () => {
     if (!currentUser) {
       setMessages([]);
@@ -119,7 +118,7 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsLoadingMessages(false);
     }
-  }, [currentUser]); // Only depend on currentUser
+  }, [currentUser]);
 
   const markMessagesAsRead = async (senderId: string) => {
     if (!currentUser) return;
@@ -250,7 +249,7 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
         messageChannel = null;
       }
     };
-  }, [currentUser]); // Only depend on currentUser
+  }, [currentUser, fetchMessages]);
 
   const sendMessage = async (receiverId: string, text: string) => {
     if (!currentUser) {
@@ -340,19 +339,10 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const getMessagesForUser = (userId: string): ExtendedMessage[] => {
-    if (!currentUser) return [];
-
-    return messages.filter(
-      (msg) =>
-        (msg.senderId === currentUser.id && msg.receiverId === userId) ||
-        (msg.senderId === userId && msg.receiverId === currentUser.id)
-    ).sort((a, b) =>
-      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
-  };
-
-  const fetchUserProfiles = async (userIds: string[]) => {
+  const fetchUserProfiles = useCallback(async (userIds: string[]) => {
+    if (!userIds || userIds.length === 0) {
+      return;
+    }
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -360,7 +350,7 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
         .in('id', userIds);
 
       if (error) {
-        console.error('Error fetching user profiles:', error);
+        console.error('[fetchUserProfiles] Supabase Error:', error);
         return;
       }
 
@@ -372,14 +362,15 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
         setUserProfiles(prev => ({ ...prev, ...profiles }));
       }
     } catch (error) {
-      console.error('Failed to fetch user profiles:', error);
+      console.error('[fetchUserProfiles] Failed to fetch user profiles:', error);
     }
-  };
+  }, []);
 
-  const getDisplayName = (userId: string) => {
+  const getDisplayName = useCallback((userId: string) => {
     const profile = userProfiles[userId];
-    if (!profile) return "Loading...";
+    if (!profile) return "Unknown User";
 
+    // Removed display_name check, back to original logic
     if (profile.first_name && profile.last_name) {
       return `${profile.first_name} ${profile.last_name}`;
     } else if (profile.first_name) {
@@ -387,10 +378,11 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
     } else if (profile.last_name) {
       return profile.last_name;
     }
+    // Fallback to email prefix
     return profile.email.split('@')[0];
-  };
+  }, [userProfiles]);
 
-  const getInitials = (userId: string) => {
+  const getInitials = useCallback((userId: string) => {
     const profile = userProfiles[userId];
     if (!profile) return "...";
 
@@ -402,7 +394,19 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
       return profile.last_name[0].toUpperCase();
     }
     return profile.email[0].toUpperCase();
-  };
+  }, [userProfiles]);
+
+  const getMessagesForUser = useCallback((userId: string): ExtendedMessage[] => {
+    if (!currentUser) return [];
+
+    return messages.filter(
+      (msg) =>
+        (msg.senderId === currentUser.id && msg.receiverId === userId) ||
+        (msg.senderId === userId && msg.receiverId === currentUser.id)
+    ).sort((a, b) =>
+      new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+  }, [messages, currentUser]);
 
   const value = {
     messages,
