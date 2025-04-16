@@ -42,9 +42,10 @@ const SubletDetailPage = () => {
   const geocodeApiKey = import.meta.env.VITE_GEOCODE_API_KEY as string; // Dedicated key for Geocoding API fetch call
 
   useEffect(() => {
-    if (!isLoadingAuth && !currentUser) {
-      navigate('/auth');
-    }
+    // Allow unauthenticated users to view this page
+    // if (!isLoadingAuth && !currentUser) {
+    //   navigate('/auth');
+    // }
   }, [currentUser, isLoadingAuth, navigate]);
 
   useEffect(() => {

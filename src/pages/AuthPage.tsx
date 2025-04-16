@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,10 @@ const AuthPage = () => {
   const widgetIdRef = useRef<string | null>(null);
   const { login, register, currentUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Check if redirected from a protected page
+  const redirected = location.state && location.state.fromProtected;
 
   // Initialize Turnstile only in production
   useEffect(() => {
@@ -139,6 +143,19 @@ const AuthPage = () => {
           <h1 className="text-3xl font-bold text-neu-red">SubletNU</h1>
           <p className="text-gray-600 mt-2">Find and post sublets for Northeastern University</p>
         </div>
+
+        {redirected && (
+          <div className="bg-yellow-100 border border-yellow-300 text-yellow-800 rounded px-4 py-3 mb-2 text-center">
+            You must be logged in to access that page.
+            <Button
+              variant="link"
+              className="block w-full mt-2 text-neu-red"
+              onClick={() => navigate("/")}
+            >
+              Back to Home
+            </Button>
+          </div>
+        )}
 
         <Card>
           <CardHeader>

@@ -17,12 +17,11 @@ const HomePage = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
-    if (!currentUser) {
-      navigate('/auth');
-    }
+    // Remove redirect for unauthenticated users
+    // if (!currentUser) {
+    //   navigate('/auth');
+    // }
   }, [currentUser, navigate]);
-
-  if (!currentUser) return null;
 
   return (
     <>

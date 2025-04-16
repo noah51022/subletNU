@@ -58,7 +58,7 @@ const EditSubletPage = () => {
   // Load sublet data
   useEffect(() => {
     if (!currentUser) {
-      navigate('/auth');
+      navigate('/auth', { state: { fromProtected: true } });
       return;
     }
 

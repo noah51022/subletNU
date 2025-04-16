@@ -101,7 +101,7 @@ const CreateSubletPage = () => {
 
   useEffect(() => {
     if (!currentUser) {
-      navigate('/auth');
+      navigate('/auth', { state: { fromProtected: true } });
     }
   }, [currentUser, navigate]);
 

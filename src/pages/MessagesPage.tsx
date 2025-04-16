@@ -127,7 +127,7 @@ const MessagesPage = () => {
   // Fetch profiles for contacts
   useEffect(() => {
     if (!currentUser) {
-      navigate('/auth');
+      navigate('/auth', { state: { fromProtected: true } });
       return;
     }
 

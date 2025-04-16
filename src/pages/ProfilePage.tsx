@@ -23,7 +23,7 @@ const ProfilePage = () => {
 
   useEffect(() => {
     if (!currentUser) {
-      navigate('/auth');
+      navigate('/auth', { state: { fromProtected: true } });
     } else {
       fetchMyListings();
       fetchUserProfile();
