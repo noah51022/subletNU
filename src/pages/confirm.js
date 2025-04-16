@@ -31,11 +31,12 @@ const Confirm = () => {
       console.error('Error parsing confirmationUrl:', e)
       return
     }
-
     const token = url.searchParams.get('token')
     const type = url.searchParams.get('type')
+    const redirectTo = url.searchParams.get('redirect_to')
     console.log('Extracted token:', token)
     console.log('Extracted type:', type)
+    console.log('Extracted redirectTo:', redirectTo)
 
     if (!token || !type) {
       setStatus('Missing token or type from confirmation URL.')
@@ -43,7 +44,7 @@ const Confirm = () => {
     }
 
     const verify = async () => {
-      const { data, error } = await supabase.auth.verifyOtp({ token, type })
+      const { data, error } = await supabase.auth.verifyOtp({ token, type, redirectTo })
       console.log('verifyOtp response:', { data, error })
 
       if (error) {
