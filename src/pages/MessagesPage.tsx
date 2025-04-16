@@ -165,7 +165,12 @@ const MessagesPage = () => {
     }
   };
 
-  if (!currentUser) return null;
+  if (!currentUser) {
+    useEffect(() => {
+      navigate('/auth', { state: { fromProtected: true } });
+    }, [navigate, location]);
+    return null;
+  }
 
   // Prevent rendering if trying to message self
   if (userId === currentUser.id) return null;
