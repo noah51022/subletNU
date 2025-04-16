@@ -14,7 +14,7 @@ const Confirm = () => {
 
   useEffect(() => {
     const confirmationUrl = searchParams.get('confirmation_url')
-    console.log('confirmationUrl:', confirmationUrl)
+    console.log('Raw confirmationUrl:', confirmationUrl)
 
     if (!confirmationUrl) {
       setStatus('Missing confirmation URL.')
@@ -23,11 +23,15 @@ const Confirm = () => {
 
     let url
     try {
-      url = new URL(confirmationUrl)
+      const decodedUrl = decodeURIComponent(confirmationUrl)
+      console.log('Decoded confirmationUrl:', decodedUrl)
+      url = new URL(decodedUrl)
     } catch (e) {
       setStatus('Invalid confirmation URL.')
+      console.error('Error parsing confirmationUrl:', e)
       return
     }
+
     const token = url.searchParams.get('token')
     const type = url.searchParams.get('type')
     console.log('Extracted token:', token)
@@ -60,4 +64,4 @@ const Confirm = () => {
   )
 }
 
-export default Confirm 
+export default Confirm
