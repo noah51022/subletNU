@@ -13,45 +13,20 @@ const Confirm = () => {
   const [status, setStatus] = useState('Verifying...')
 
   useEffect(() => {
-    const confirmationUrl = searchParams.get('confirmation_url')
-    console.log('Raw confirmationUrl:', confirmationUrl)
-
-    if (!confirmationUrl) {
-      setStatus('Missing confirmation URL.')
-      return
-    }
-
-    let url
-    try {
-      const decodedUrl = decodeURIComponent(confirmationUrl)
-      console.log('Decoded confirmationUrl:', decodedUrl)
-      url = new URL(decodedUrl)
-    } catch (e) {
-      setStatus('Invalid confirmation URL.')
-      console.error('Error parsing confirmationUrl:', e)
-      return
-    }
-    const token = url.searchParams.get('token')
-    const type = url.searchParams.get('type')
-    const redirectTo = searchParams.get('redirect_to')
+    const token = searchParams.get('token')
+    const type = searchParams.get('type')
     const email = searchParams.get('email')
     console.log('Extracted token:', token)
     console.log('Extracted type:', type)
-    console.log('Extracted redirectTo:', redirectTo)
     console.log('Extracted email:', email)
 
     if (!token || !type) {
-      setStatus('Missing token or type from confirmation URL.')
+      setStatus('Missing token or type from URL.')
       return
     }
 
     const verify = async () => {
-      const emailTypes = ['signup', 'recovery', 'invite', 'email_change', 'email']
-      const params = { token, type, redirectTo }
-      if (email && emailTypes.includes(type)) {
-        params.email = email
-      }
-      const { data, error } = await supabase.auth.verifyOtp(params)
+      const { data, error } = await supabase.auth.verifyOtp({ token, type, email })
       console.log('verifyOtp response:', { data, error })
 
       if (error) {
