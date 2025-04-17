@@ -1,13 +1,11 @@
-// api/generate-signup-token.js
-
-const { createClient } = require('@supabase/supabase-js')
+import { createClient } from '@supabase/supabase-js'
 
 const supabaseAdmin = createClient(
   process.env.VITE_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   const { email } = req.query
 
   if (!email) {
@@ -20,6 +18,7 @@ module.exports = async (req, res) => {
   })
 
   if (error) {
+    console.error('Supabase error:', error)
     return res.status(500).json({ error: error.message })
   }
 
