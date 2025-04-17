@@ -13,22 +13,29 @@ const Confirm = () => {
   const [status, setStatus] = useState('Verifying...')
 
   useEffect(() => {
-    const token = searchParams.get('token')
-    const type = searchParams.get('type')
     const email = searchParams.get('email')
-    console.log('Extracted token:', token)
-    console.log('Extracted type:', type)
     console.log('Extracted email:', email)
 
-    if (!token || !type) {
-      setStatus('Missing token or type from URL.')
+    if (!email) {
+      setStatus('Missing email from URL.')
       return
     }
 
     const verify = async () => {
-      const { data, error } = await supabase.auth.verifyOtp({ token, type, email })
+      // Call backend to generate signup token
+      let token
+      try {
+        const res = await fetch(`/api/generate-signup-token?email=${encodeURIComponent(email)}`)
+        const result = await res.json()
+        if (!res.ok || !result.token) throw new Error(result.error || 'Failed to get token')
+        token = result.token
+      } catch (err) {
+        setStatus(`Failed to generate signup token: ${err.message}`)
+        return
+      }
+      // Now verify with Supabase
+      const { data, error } = await supabase.auth.verifyOtp({ token, type: 'signup', email })
       console.log('verifyOtp response:', { data, error })
-
       if (error) {
         setStatus(`Verification failed: ${error.message}`)
       } else {
@@ -43,7 +50,6 @@ const Confirm = () => {
         }
       }
     }
-
     verify()
   }, [searchParams, navigate])
 
