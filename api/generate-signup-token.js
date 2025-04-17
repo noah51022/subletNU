@@ -2,22 +2,44 @@ import { createClient } from '@supabase/supabase-js'
 
 // Initialize Supabase Admin client with the public URL env var
 const supabaseAdmin = createClient(
-  process.env.VITE_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
+  process.env.VITE_SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 )
 
 export default async function handler(req, res) {
-  // Debug: log incoming method and query
-  console.log('[generate-signup-token] method:', req.method, 'query:', req.method === 'GET' ? req.query : JSON.parse(req.body || '{}'))
+  // Detailed request logging
+  console.log('[generate-signup-token] Full request details:', {
+    method: req.method,
+    query: req.query,
+    headers: req.headers,
+    email: req.query.email,
+    emailType: typeof req.query.email
+  })
+
+  // Validate environment variables
+  if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('Missing required environment variables')
+    return res.status(500).json({ error: 'Server configuration error' })
+  }
+
   const method = req.method
-  let email
+  let email = ''
 
   if (method === 'GET') {
     // Confirmation flow: generate OTP token for existing user
     email = req.query.email
-    if (!email) {
-      return res.status(400).json({ error: 'Missing email parameter' })
+    console.log('[generate-signup-token] Processing email:', {
+      rawEmail: email,
+      type: typeof email,
+      isEmpty: !email,
+      trimmedEmpty: email && email.trim() === ''
+    })
+
+    if (!email || typeof email !== 'string' || email.trim() === '') {
+      console.error('Invalid or missing email:', { email, type: typeof email })
+      return res.status(400).json({ error: 'An email address is required' })
     }
+    email = email.trim()
   } else if (method === 'POST') {
     // Signup flow: create user then generate OTP token
     const { firstName, lastName, email: bodyEmail, password } = JSON.parse(req.body || '{}')
@@ -44,15 +66,19 @@ export default async function handler(req, res) {
   }
 
   // Generate the OTP signup link using correct SDK signature
-  const { data, error: linkError } = await supabaseAdmin.auth.admin.generateLink(
-    'signup',
+  const { data, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+    type: 'signup',
     email,
-    { shouldSendEmail: false, redirectTo: 'https://subletnu.vercel.app/confirm' }
-  )
+    options: { shouldSendEmail: false, redirectTo: 'https://subletnu.vercel.app/confirm' }
+  })
+
+  // Debug: return raw Supabase generateLink response when GET & debug=true
+  if (method === 'GET' && req.query.debug === 'true') {
+    return res.status(200).json({ data, linkError })
+  }
 
   // Debug: log the raw response
   console.log('[generateLink] data:', data, 'error:', linkError)
-
   if (linkError) {
     console.error('Generate link error:', linkError)
     return res.status(500).json({ error: linkError.message })
@@ -81,16 +107,6 @@ export default async function handler(req, res) {
   if (!token) {
     console.error('Failed to extract token from link:', actionLink)
     return res.status(500).json({ error: 'Failed to extract token from link', actionLink })
-  }
-
-  // Debug route: return raw generateLink response when ?debug=true
-  if (method === 'GET' && req.query.debug === 'true') {
-    const { data: debugData, error: debugError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'signup',
-      email,
-      options: { shouldSendEmail: false, emailRedirectTo: 'https://subletnu.vercel.app/confirm' }
-    });
-    return res.status(200).json({ debugData, debugError });
   }
 
   return res.status(200).json({ token, email, type: method === 'GET' ? 'magiclink' : 'signup' })
