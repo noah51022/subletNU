@@ -60,7 +60,15 @@ export default async function handler(req, res) {
     }
 
     const actionLink = data?.action_link;
-    const token = actionLink?.split('token=')[1]?.split('&')[0];
+    let token;
+    if (actionLink) {
+      try {
+        const linkUrl = new URL(actionLink);
+        token = linkUrl.searchParams.get('token') || linkUrl.searchParams.get('access_token');
+      } catch (err) {
+        console.error('Invalid action_link URL:', actionLink, err);
+      }
+    }
 
     if (!token) {
       return res.status(500).json({ error: 'Failed to extract token from link' });
