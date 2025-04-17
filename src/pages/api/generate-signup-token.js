@@ -1,8 +1,10 @@
-import { createClient } from '@supabase/supabase-js'
+// api/generate-signup-token.js
+
+const { createClient } = require('@supabase/supabase-js')
 
 const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY // ❗ do NOT expose this to the frontend!
+  process.env.VITE_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
 export default async function handler(req, res) {
@@ -26,4 +28,4 @@ export default async function handler(req, res) {
     type: 'signup',
     email,
   })
-} 
+}
