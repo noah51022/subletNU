@@ -23,8 +23,8 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: createError.message })
   }
 
-  // Step 2: Generate signup token/link
-  const { data, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+  // Step 2: Generate signup token/link with options
+  const { data, error } = await supabaseAdmin.auth.admin.generateLink({
     type: 'signup',
     email,
     options: {
@@ -33,22 +33,11 @@ export default async function handler(req, res) {
     }
   })
 
-  if (linkError) {
-    console.error('Generate link error:', linkError)
-    return res.status(500).json({ error: linkError.message })
-  }
-
   if (!data?.action_link) {
-    console.error('No action_link returned from generateLink:', data)
     return res.status(500).json({ error: 'No action_link returned from Supabase.' })
   }
 
   const token = data.action_link.split('token=')[1]?.split('&')[0]
-
-  if (!token) {
-    console.error('Failed to extract token from action_link:', data.action_link)
-    return res.status(500).json({ error: 'Failed to extract token from action_link.' })
-  }
 
   return res.status(200).json({
     token,
