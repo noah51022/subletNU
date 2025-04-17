@@ -15,27 +15,22 @@ const ConfirmPage = () => {
 
   useEffect(() => {
     const email = query.get("email") || "";
+    const token = query.get("token") || "";
+    const type = query.get("type") || "signup";
+
     if (!email) {
       setStatus("error");
       setMessage("Missing email from URL.");
       return;
     }
 
-    const verify = async () => {
-      let token;
-      let type;
-      try {
-        const res = await fetch(`/api/generate-signup-token?email=${encodeURIComponent(email)}`);
-        const result = await res.json();
-        if (!res.ok || !result.token) throw new Error(result.error || "Failed to get token");
-        token = result.token;
-        type = result.type;
-      } catch (err: any) {
-        setStatus("error");
-        setMessage(`Failed to generate signup token: ${err.message}`);
-        return;
-      }
+    if (!token) {
+      setStatus("error");
+      setMessage("Missing token from URL.");
+      return;
+    }
 
+    const verify = async () => {
       try {
         const { data, error } = await supabase.auth.verifyOtp({
           token,
@@ -44,8 +39,10 @@ const ConfirmPage = () => {
         });
 
         if (error) {
+          console.error("Verification error:", error);
           setStatus("error");
           setMessage(error.message || "Verification failed.");
+          // If token expired, we should redirect to login
           if (error.message.includes('expired')) {
             setTimeout(() => navigate("/auth"), 3000);
           }
@@ -62,6 +59,7 @@ const ConfirmPage = () => {
           }
         }
       } catch (err: any) {
+        console.error("Verification error:", err);
         setStatus("error");
         setMessage(`Verification failed: ${err.message}`);
       }

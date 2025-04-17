@@ -114,6 +114,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'No action_link found in response' })
     }
 
+    // Extract token and create confirmation URL
     let token
     try {
       const url = new URL(actionLink)
@@ -122,12 +123,23 @@ export default async function handler(req, res) {
         console.error('No token found in action_link:', actionLink)
         return res.status(500).json({ error: 'No token found in action_link' })
       }
+
+      // Create the confirmation URL with all necessary parameters
+      const confirmUrl = new URL('https://subletnu.vercel.app/confirm')
+      confirmUrl.searchParams.set('email', email)
+      confirmUrl.searchParams.set('token', token)
+      confirmUrl.searchParams.set('type', 'signup')
+
+      return res.status(200).json({
+        token,
+        email,
+        type: 'signup',
+        confirmUrl: confirmUrl.toString()
+      })
     } catch (err) {
       console.error('Invalid action_link URL:', actionLink, err)
       return res.status(500).json({ error: 'Invalid action_link URL' })
     }
-
-    return res.status(200).json({ token, email, type: 'signup' })
   } else {
     return res.status(405).json({ error: 'Only GET and POST allowed' })
   }
