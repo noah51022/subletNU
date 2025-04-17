@@ -60,9 +60,12 @@ const Confirm = () => {
         if (data?.session) {
           await supabase.auth.setSession(data.session)
           console.log('Logged in with session:', data.session)
+          setStatus('Email verified and logged in! Redirecting...')
+          setTimeout(() => navigate('/'), 3000)
+        } else {
+          setStatus('Email verified, but please log in manually.')
+          setTimeout(() => navigate('/auth'), 3000)
         }
-        setStatus('Email verified and logged in! Redirecting...')
-        setTimeout(() => navigate('/'), 3000)
       }
     }
 
