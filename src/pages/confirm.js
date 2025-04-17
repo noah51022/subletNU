@@ -34,9 +34,11 @@ const Confirm = () => {
     const token = url.searchParams.get('token')
     const type = url.searchParams.get('type')
     const redirectTo = url.searchParams.get('redirect_to')
+    const email = url.searchParams.get('email')
     console.log('Extracted token:', token)
     console.log('Extracted type:', type)
     console.log('Extracted redirectTo:', redirectTo)
+    console.log('Extracted email:', email)
 
     if (!token || !type) {
       setStatus('Missing token or type from confirmation URL.')
@@ -44,7 +46,12 @@ const Confirm = () => {
     }
 
     const verify = async () => {
-      const { data, error } = await supabase.auth.verifyOtp({ token, type, redirectTo })
+      const emailTypes = ['signup', 'recovery', 'invite', 'email_change', 'email']
+      const params = { token, type, redirectTo }
+      if (email && emailTypes.includes(type)) {
+        params.email = email
+      }
+      const { data, error } = await supabase.auth.verifyOtp(params)
       console.log('verifyOtp response:', { data, error })
 
       if (error) {
