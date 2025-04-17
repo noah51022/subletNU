@@ -1,94 +1,44 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseAdmin = createClient(
-  process.env.VITE_SUPABASE_URL,
+const supabase = createClient(
+  process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
 export default async function handler(req, res) {
-  try {
-    // Handle both GET and POST requests
-    let email;
+  if (req.method !== 'POST')
+    return res.status(405).json({ error: `Only POST allowed` })
 
-    if (req.method === 'GET') {
-      // Handle GET request with email as query parameter
-      email = req.query.email;
+  const { firstName, lastName, email, password } = req.body
+  if (!firstName || !lastName || !email || !password)
+    return res.status(400).json({ error: 'All fields required' })
+  if (password.length < 6)
+    return res.status(400).json({ error: 'Password must be ≥ 6 chars' })
 
-      if (!email) {
-        return res.status(400).json({ error: 'Missing email parameter' });
-      }
-    } else {
-      // Handle POST request with full user data in body
-      const { email: bodyEmail, password, firstName, lastName } = JSON.parse(req.body || '{}');
-      email = bodyEmail;
+  // create user
+  const { data: user, error: createError } = await supabase.auth.admin.createUser({
+    email, password, email_confirm: false,
+    user_metadata: { firstName, lastName }
+  })
+  if (createError) return res.status(400).json({ error: createError.message })
 
-      if (!email || !password || !firstName || !lastName) {
-        return res.status(400).json({ error: 'Missing required fields' });
-      }
+  // generate link
+  const { data: linkData, error: linkError } =
+    await supabase.auth.admin.generateLink('signup', email, {
+      redirectTo: 'https://subletnu.vercel.app/confirm'
+    })
+  if (linkError) return res.status(400).json({ error: linkError.message })
 
-      // Create user with metadata and email unconfirmed
-      const { error: createError } = await supabaseAdmin.auth.admin.createUser({
-        email,
-        password,
-        user_metadata: {
-          first_name: firstName,
-          last_name: lastName
-        },
-        email_confirm: false
-      });
+  console.log('Raw actionLink:', linkData.actionLink)
 
-      // Allow "already registered" so user can retry safely
-      if (createError && !createError.message.includes('already registered')) {
-        console.error('Create user error:', createError);
-        return res.status(500).json({ error: createError.message });
-      }
-    }
-
-    // Generate confirmation link for both GET and POST requests
-    const { data, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'magiclink',  // Changed from 'signup' to 'magiclink' since we're just verifying email
-      email,
-      options: {
-        shouldSendEmail: false,
-        emailRedirectTo: 'https://subletnu.vercel.app/confirm'
-      }
-    });
-
-    if (linkError) {
-      console.error('Generate link error:', linkError);
-      return res.status(500).json({ error: linkError.message });
-    }
-
-    const actionLink = data?.action_link;
-    let token;
-    if (actionLink) {
-      try {
-        const linkUrl = new URL(actionLink);
-        // Try query params first
-        token = linkUrl.searchParams.get('token') || linkUrl.searchParams.get('access_token');
-        // Fallback to hash fragment if not found
-        if (!token && linkUrl.hash) {
-          const hashParams = new URLSearchParams(linkUrl.hash.substring(1));
-          token = hashParams.get('token') || hashParams.get('access_token');
-        }
-      } catch (err) {
-        console.error('Invalid action_link URL:', actionLink, err);
-      }
-    }
-
-    if (!token) {
-      return res.status(500).json({ error: 'Failed to extract token from link', actionLink });
-    }
-
-    // Temporary: include actionLink in response for debugging
-    return res.status(200).json({
-      actionLink,
-      token,
-      type: req.method === 'GET' ? 'magiclink' : 'signup',
-      email
-    });
-  } catch (err) {
-    console.error('Signup endpoint error:', err);
-    return res.status(500).json({ error: err.message || 'Unexpected error' });
+  // parse token
+  const url = new URL(linkData.actionLink)
+  const token = url.searchParams.get('token')
+  if (!token) {
+    console.error('No token param in:', linkData.actionLink)
+    return res.status(500).json({ error: 'Failed to extract token from link' })
   }
+
+  // respond
+  return res.status(200).json({ token, email, type: 'signup' })
 }
