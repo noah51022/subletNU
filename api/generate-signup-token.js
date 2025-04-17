@@ -84,29 +84,25 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: linkError.message })
   }
 
-  // Supabase v2 returns data.actionLink
-  const actionLink = data?.actionLink || data?.action_link
+  // Get action_link from the correct location in the response
+  const actionLink = data?.properties?.action_link
   if (!actionLink) {
-    console.error('No action_link returned by Supabase:', data)
-    return res.status(500).json({ error: 'No action_link returned', data })
+    console.error('No action_link found in response:', data)
+    return res.status(500).json({ error: 'No action_link found in response' })
   }
 
   // Extract token
   let token
   try {
     const url = new URL(actionLink)
-    token = url.searchParams.get('token') || url.searchParams.get('access_token')
-    if (!token && url.hash) {
-      const hashParams = new URLSearchParams(url.hash.substring(1))
-      token = hashParams.get('token') || hashParams.get('access_token')
+    token = url.searchParams.get('token')
+    if (!token) {
+      console.error('No token found in action_link:', actionLink)
+      return res.status(500).json({ error: 'No token found in action_link' })
     }
   } catch (err) {
     console.error('Invalid action_link URL:', actionLink, err)
-  }
-
-  if (!token) {
-    console.error('Failed to extract token from link:', actionLink)
-    return res.status(500).json({ error: 'Failed to extract token from link', actionLink })
+    return res.status(500).json({ error: 'Invalid action_link URL' })
   }
 
   return res.status(200).json({ token, email, type: method === 'GET' ? 'magiclink' : 'signup' })
