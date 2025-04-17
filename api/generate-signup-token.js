@@ -8,7 +8,7 @@ const supabaseAdmin = createClient(
 export default async function handler(req, res) {
   try {
     // Handle both GET and POST requests
-    let email, password, firstName, lastName;
+    let email;
 
     if (req.method === 'GET') {
       // Handle GET request with email as query parameter
@@ -17,11 +17,10 @@ export default async function handler(req, res) {
       if (!email) {
         return res.status(400).json({ error: 'Missing email parameter' });
       }
-
-      // For GET requests, we only generate a token for an existing user
     } else {
       // Handle POST request with full user data in body
-      ({ email, password, firstName, lastName } = JSON.parse(req.body || '{}'));
+      const { email: bodyEmail, password, firstName, lastName } = JSON.parse(req.body || '{}');
+      email = bodyEmail;
 
       if (!email || !password || !firstName || !lastName) {
         return res.status(400).json({ error: 'Missing required fields' });
@@ -47,7 +46,7 @@ export default async function handler(req, res) {
 
     // Generate confirmation link for both GET and POST requests
     const { data, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'signup',
+      type: 'magiclink',  // Changed from 'signup' to 'magiclink' since we're just verifying email
       email,
       options: {
         shouldSendEmail: false,
@@ -69,7 +68,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       token,
-      type: 'signup',
+      type: req.method === 'GET' ? 'magiclink' : 'signup',
       email
     });
   } catch (err) {

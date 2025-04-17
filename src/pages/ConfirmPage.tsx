@@ -23,31 +23,44 @@ const ConfirmPage = () => {
 
     const verify = async () => {
       let token;
+      let type;
       try {
         const res = await fetch(`/api/generate-signup-token?email=${encodeURIComponent(email)}`);
         const result = await res.json();
         if (!res.ok || !result.token) throw new Error(result.error || "Failed to get token");
         token = result.token;
+        type = result.type;
       } catch (err: any) {
         setStatus("error");
         setMessage(`Failed to generate signup token: ${err.message}`);
         return;
       }
-      const { data, error } = await supabase.auth.verifyOtp({ token, type: "signup", email });
-      if (error) {
-        setStatus("error");
-        setMessage(error.message || "Verification failed.");
-      } else {
-        if (data?.session) {
-          await supabase.auth.setSession(data.session);
-          setStatus("success");
-          setMessage("Email verified and logged in! Redirecting...");
-          setTimeout(() => navigate("/"), 3000);
+
+      try {
+        const { data, error } = await supabase.auth.verifyOtp({
+          token,
+          type: type as "signup" | "magiclink",
+          email
+        });
+
+        if (error) {
+          setStatus("error");
+          setMessage(error.message || "Verification failed.");
         } else {
-          setStatus("success");
-          setMessage("Email verified, but please log in manually.");
-          setTimeout(() => navigate("/auth"), 3000);
+          if (data?.session) {
+            await supabase.auth.setSession(data.session);
+            setStatus("success");
+            setMessage("Email verified and logged in! Redirecting...");
+            setTimeout(() => navigate("/"), 3000);
+          } else {
+            setStatus("success");
+            setMessage("Email verified, but please log in manually.");
+            setTimeout(() => navigate("/auth"), 3000);
+          }
         }
+      } catch (err: any) {
+        setStatus("error");
+        setMessage(`Verification failed: ${err.message}`);
       }
     };
     verify();
