@@ -9,8 +9,6 @@ const Confirm = () => {
 
   useEffect(() => {
     const email = searchParams.get('email')
-    const token = searchParams.get('token')
-
     if (!email) {
       setStatus('Missing email from URL.')
       return
@@ -18,25 +16,20 @@ const Confirm = () => {
 
     const verify = async () => {
       try {
-        let verifyToken = token
-
-        // If no token in URL, get a fresh one from backend
-        if (!token) {
-          const res = await fetch('/api/generate-signup-token?email=' + encodeURIComponent(email))
-          if (!res.ok) {
-            const text = await res.text()
-            throw new Error(`Failed to generate signup token: ${text}`)
-          }
-          const result = await res.json()
-          if (!result.token) {
-            throw new Error(result.error || 'Failed to get token')
-          }
-          verifyToken = result.token
+        // Get token from backend
+        const res = await fetch('/api/generate-signup-token?email=' + encodeURIComponent(email))
+        if (!res.ok) {
+          const text = await res.text()
+          throw new Error(`Failed to generate signup token: ${text}`)
+        }
+        const result = await res.json()
+        if (!result.token) {
+          throw new Error(result.error || 'Failed to get token')
         }
 
         // Verify with Supabase
         const { data, error } = await supabase.auth.verifyOtp({
-          token: verifyToken,
+          token: result.token,
           type: 'signup',
           email
         })
