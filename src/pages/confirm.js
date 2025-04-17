@@ -33,8 +33,8 @@ const Confirm = () => {
     }
     const token = url.searchParams.get('token')
     const type = url.searchParams.get('type')
-    const redirectTo = url.searchParams.get('redirect_to')
-    const email = url.searchParams.get('email')
+    const redirectTo = searchParams.get('redirect_to')
+    const email = searchParams.get('email')
     console.log('Extracted token:', token)
     console.log('Extracted type:', type)
     console.log('Extracted redirectTo:', redirectTo)
