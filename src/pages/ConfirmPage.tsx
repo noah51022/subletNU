@@ -1,19 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-function useQuery() {
-  return new URLSearchParams(useLocation().search);
-}
-
 const ConfirmPage = () => {
-  const query = useQuery();
+  const location = useLocation();
   const navigate = useNavigate();
+  const query = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
+    if (status !== 'loading') {
+      console.log(`Skipping effect run because status is: ${status}`);
+      return;
+    }
+
     const email = query.get("email") || "";
 
     if (!email) {
@@ -88,8 +90,10 @@ const ConfirmPage = () => {
         }
       }
     };
+
+    console.log("Running confirmEmailAndLogin effect...");
     confirmEmailAndLogin();
-  }, [query, navigate]);
+  }, [query, navigate, status]);
 
   return (
     <div className="min-h-screen flex flex-col justify-center items-center bg-gray-50 px-4">
