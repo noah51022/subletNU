@@ -27,6 +27,10 @@ export default async function handler(req, res) {
   const { data, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
     type: 'signup',
     email,
+    options: {
+      shouldSendEmail: false,
+      emailRedirectTo: 'https://subletnu.vercel.app/confirm'
+    }
   })
 
   if (linkError) {
