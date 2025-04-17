@@ -64,17 +64,25 @@ export default async function handler(req, res) {
     if (actionLink) {
       try {
         const linkUrl = new URL(actionLink);
+        // Try query params first
         token = linkUrl.searchParams.get('token') || linkUrl.searchParams.get('access_token');
+        // Fallback to hash fragment if not found
+        if (!token && linkUrl.hash) {
+          const hashParams = new URLSearchParams(linkUrl.hash.substring(1));
+          token = hashParams.get('token') || hashParams.get('access_token');
+        }
       } catch (err) {
         console.error('Invalid action_link URL:', actionLink, err);
       }
     }
 
     if (!token) {
-      return res.status(500).json({ error: 'Failed to extract token from link' });
+      return res.status(500).json({ error: 'Failed to extract token from link', actionLink });
     }
 
+    // Temporary: include actionLink in response for debugging
     return res.status(200).json({
+      actionLink,
       token,
       type: req.method === 'GET' ? 'magiclink' : 'signup',
       email
