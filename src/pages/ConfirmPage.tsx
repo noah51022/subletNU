@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,18 +12,27 @@ const ConfirmPage = () => {
   const navigate = useNavigate();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [message, setMessage] = useState("");
+  const verificationAttemptedRef = useRef(false);
 
   useEffect(() => {
+    if (verificationAttemptedRef.current) {
+      return;
+    }
+
     const email = query.get("email") || "";
     const type = query.get("type") || "signup";
 
     if (!email) {
       setStatus("error");
       setMessage("Missing email from URL.");
+      verificationAttemptedRef.current = true;
       return;
     }
 
     const verify = async () => {
+      if (verificationAttemptedRef.current) return;
+      verificationAttemptedRef.current = true;
+
       try {
         setStatus("loading");
         setMessage("Generating verification token...");
@@ -77,7 +86,10 @@ const ConfirmPage = () => {
         }
       }
     };
-    verify();
+
+    if (!verificationAttemptedRef.current) {
+      verify();
+    }
   }, [query, navigate]);
 
   return (
