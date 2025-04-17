@@ -26,16 +26,28 @@ export default async function handler(req, res) {
   let email = ''
 
   if (method === 'GET') {
-    // Confirmation flow: verify existing token
+    // Confirmation flow: verify and generate token if needed
     email = req.query.email
     if (!email || typeof email !== 'string' || email.trim() === '') {
       return res.status(400).json({ error: 'An email address is required' })
     }
     email = email.trim()
 
-    // For GET requests (email confirmation), we'll use email verification instead
+    // First, check if the user exists and is unconfirmed
+    const { data: user, error: userError } = await supabaseAdmin.auth.admin.getUserByEmail(email)
+
+    if (userError) {
+      console.error('Error fetching user:', userError)
+      return res.status(500).json({ error: userError.message })
+    }
+
+    if (!user) {
+      return res.status(400).json({ error: 'User not found. Please sign up first.' })
+    }
+
+    // Generate signup token for email confirmation
     const { data, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'magiclink',
+      type: 'signup',
       email,
       options: {
         shouldSendEmail: false,
@@ -67,7 +79,7 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'Invalid action_link URL' })
     }
 
-    return res.status(200).json({ token, email, type: 'magiclink' })
+    return res.status(200).json({ token, email, type: 'signup' })
 
   } else if (method === 'POST') {
     // Signup flow: create user then generate signup token
