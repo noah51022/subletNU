@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 
+// Initialize Supabase Admin client with the public URL env var
 const supabaseAdmin = createClient(
   process.env.VITE_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -42,27 +43,29 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Only GET and POST allowed' })
   }
 
-  // Generate the signup (OTP) link
-  const { data, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-    type: 'signup',
+  // Generate the OTP signup link using correct SDK signature
+  const { data, error: linkError } = await supabaseAdmin.auth.admin.generateLink(
+    'signup',
     email,
-    options: {
-      shouldSendEmail: false,
-      emailRedirectTo: 'https://subletnu.vercel.app/confirm',
-    },
-  })
+    { shouldSendEmail: false, redirectTo: 'https://subletnu.vercel.app/confirm' }
+  )
+
+  // Debug: log the raw response
+  console.log('[generateLink] data:', data, 'error:', linkError)
+
   if (linkError) {
     console.error('Generate link error:', linkError)
     return res.status(500).json({ error: linkError.message })
   }
 
-  const actionLink = data?.action_link
+  // Supabase v2 returns data.actionLink
+  const actionLink = data?.actionLink || data?.action_link
   if (!actionLink) {
-    console.error('No action_link returned by Supabase')
-    return res.status(500).json({ error: 'No action_link returned' })
+    console.error('No action_link returned by Supabase:', data)
+    return res.status(500).json({ error: 'No action_link returned', data })
   }
 
-  // Extract token from URL query or hash fragment
+  // Extract token
   let token
   try {
     const url = new URL(actionLink)
@@ -78,6 +81,16 @@ export default async function handler(req, res) {
   if (!token) {
     console.error('Failed to extract token from link:', actionLink)
     return res.status(500).json({ error: 'Failed to extract token from link', actionLink })
+  }
+
+  // Debug route: return raw generateLink response when ?debug=true
+  if (method === 'GET' && req.query.debug === 'true') {
+    const { data: debugData, error: debugError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'signup',
+      email,
+      options: { shouldSendEmail: false, emailRedirectTo: 'https://subletnu.vercel.app/confirm' }
+    });
+    return res.status(200).json({ debugData, debugError });
   }
 
   return res.status(200).json({ token, email, type: method === 'GET' ? 'magiclink' : 'signup' })
