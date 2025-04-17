@@ -14,15 +14,12 @@ const Confirm = () => {
 
   useEffect(() => {
     const email = searchParams.get('email')
-    console.log('Extracted email:', email)
-
     if (!email) {
       setStatus('Missing email from URL.')
       return
     }
 
     const verify = async () => {
-      // Call backend to generate signup token
       let token
       try {
         const res = await fetch(`/api/generate-signup-token?email=${encodeURIComponent(email)}`)
@@ -33,15 +30,12 @@ const Confirm = () => {
         setStatus(`Failed to generate signup token: ${err.message}`)
         return
       }
-      // Now verify with Supabase
       const { data, error } = await supabase.auth.verifyOtp({ token, type: 'signup', email })
-      console.log('verifyOtp response:', { data, error })
       if (error) {
         setStatus(`Verification failed: ${error.message}`)
       } else {
         if (data?.session) {
           await supabase.auth.setSession(data.session)
-          console.log('Logged in with session:', data.session)
           setStatus('Email verified and logged in! Redirecting...')
           setTimeout(() => navigate('/'), 3000)
         } else {

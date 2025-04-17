@@ -14,66 +14,40 @@ const ConfirmPage = () => {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    let token = query.get("token") || "";
-    let type = query.get("type") || "signup";
-    let email = query.get("email") || "";
-    let redirectTo = query.get("redirectTo") || query.get("redirect_to") || "";
-
-    // Support confirmation_url param (decode and extract from it if present)
-    const confirmationUrl = query.get("confirmation_url");
-    if (confirmationUrl) {
-      try {
-        const decodedUrl = decodeURIComponent(confirmationUrl);
-        console.log("Decoded confirmationUrl:", decodedUrl);
-        const url = new URL(decodedUrl);
-        token = url.searchParams.get("token") || token;
-        type = url.searchParams.get("type") || type;
-        email = url.searchParams.get("email") || email;
-        redirectTo = url.searchParams.get("redirectTo") || url.searchParams.get("redirect_to") || redirectTo;
-      } catch (e) {
-        setStatus("error");
-        setMessage("Invalid confirmation URL.");
-        console.error("Error parsing confirmationUrl:", e);
-        return;
-      }
-    }
-
-    console.log("Extracted token:", token);
-    console.log("Extracted type:", type);
-    console.log("Extracted email:", email);
-    console.log("Extracted redirectTo:", redirectTo);
-
-    if (!token || !type) {
+    const email = query.get("email") || "";
+    if (!email) {
       setStatus("error");
-      setMessage("Missing or invalid token or type.");
+      setMessage("Missing email from URL.");
       return;
     }
 
     const verify = async () => {
-      // Only include email if type is one of the email-based types
-      const emailTypes = ["signup", "email", "recovery", "invite", "email_change"];
-      const params: any = {
-        token,
-        type: type as any,
-        ...(redirectTo ? { redirectTo } : {}),
-      };
-      if (email && emailTypes.includes(type)) {
-        params.email = email;
+      let token;
+      try {
+        const res = await fetch(`/api/generate-signup-token?email=${encodeURIComponent(email)}`);
+        const result = await res.json();
+        if (!res.ok || !result.token) throw new Error(result.error || "Failed to get token");
+        token = result.token;
+      } catch (err: any) {
+        setStatus("error");
+        setMessage(`Failed to generate signup token: ${err.message}`);
+        return;
       }
-      const { data, error } = await supabase.auth.verifyOtp(params);
-      console.log("verifyOtp response:", { data, error });
-
+      const { data, error } = await supabase.auth.verifyOtp({ token, type: "signup", email });
       if (error) {
         setStatus("error");
         setMessage(error.message || "Verification failed.");
       } else {
         if (data?.session) {
           await supabase.auth.setSession(data.session);
-          console.log("Logged in with session:", data.session);
+          setStatus("success");
+          setMessage("Email verified and logged in! Redirecting...");
+          setTimeout(() => navigate("/"), 3000);
+        } else {
+          setStatus("success");
+          setMessage("Email verified, but please log in manually.");
+          setTimeout(() => navigate("/auth"), 3000);
         }
-        setStatus("success");
-        setMessage("Email verified and logged in! Redirecting...");
-        setTimeout(() => navigate("/"), 3000);
       }
     };
     verify();
