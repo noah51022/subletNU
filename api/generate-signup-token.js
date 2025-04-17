@@ -29,51 +29,53 @@ export default async function handler(req, res) {
   let email = ''
 
   if (method === 'GET') {
-    // Confirmation flow: verify and generate token if needed
+    // Confirmation flow: Find user and mark email as confirmed
     email = req.query.email
     if (!email || typeof email !== 'string' || email.trim() === '') {
       return res.status(400).json({ error: 'An email address is required' })
     }
     email = email.trim()
 
-    // Generate signup token for email confirmation
-    const { data, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'signup',
-      email,
-      options: {
-        shouldSendEmail: false,
-        redirectTo: 'https://subletnu.vercel.app/confirm'
-      }
-    })
-
-    if (linkError) {
-      console.error('Generate link error:', linkError)
-      return res.status(500).json({ error: linkError.message })
-    }
-
-    const actionLink = data?.properties?.action_link
-    if (!actionLink) {
-      console.error('No action_link found in response:', data)
-      return res.status(500).json({ error: 'No action_link found in response' })
-    }
-
-    let token
     try {
-      const url = new URL(actionLink)
-      token = url.searchParams.get('token')
-      if (!token) {
-        console.error('No token found in action_link:', actionLink)
-        return res.status(500).json({ error: 'No token found in action_link' })
+      // Find the user by email
+      const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers({ email });
+      if (listError) throw listError;
+      if (!users || users.length === 0) {
+        return res.status(404).json({ error: 'User not found' });
       }
-    } catch (err) {
-      console.error('Invalid action_link URL:', actionLink, err)
-      return res.status(500).json({ error: 'Invalid action_link URL' })
-    }
 
-    return res.status(200).json({ token, email, type: 'signup' })
+      const user = users[0];
+
+      // Check if email is already confirmed
+      if (user.email_confirmed_at) {
+        console.log(`Email ${email} already confirmed for user ${user.id}`);
+        // Decide how to handle already confirmed - maybe treat as success?
+        // Or return a specific status/message? For now, treat as success.
+        return res.status(200).json({ message: 'Email already confirmed', email });
+      }
+
+      // Update the user to confirm their email
+      const { data: updatedUser, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        user.id,
+        { email_confirm: true }
+      );
+
+      if (updateError) throw updateError;
+
+      console.log(`Successfully confirmed email for user ${user.id}`);
+      return res.status(200).json({ message: 'Email successfully confirmed', email });
+
+    } catch (error) {
+      console.error(`Error confirming email ${email}:`, error);
+      // Provide a more specific error message if possible
+      const errorMessage = error instanceof Error ? error.message : 'Internal server error during email confirmation';
+      // Determine appropriate status code based on error type if needed
+      const statusCode = error.message?.includes('User not found') ? 404 : 500;
+      return res.status(statusCode).json({ error: errorMessage });
+    }
 
   } else if (method === 'POST') {
-    // Signup flow: create user then generate signup token
+    // Signup flow: create user (unconfirmed)
     const { firstName, lastName, email: bodyEmail, password } = JSON.parse(req.body || '{}')
     email = bodyEmail
     if (!firstName || !lastName || !email || !password) {
@@ -91,58 +93,22 @@ export default async function handler(req, res) {
       email_confirm: false,
     })
 
-    if (createError && !createError.message.includes('already registered')) {
+    if (createError) { // Don't need to check for 'already registered' here if listUsers above handles it
       console.error('Create user error:', createError)
       return res.status(500).json({ error: createError.message })
     }
 
-    // Generate signup token
-    const { data, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'signup',
-      email,
-      options: {
-        shouldSendEmail: false,
-        redirectTo: 'https://subletnu.vercel.app/confirm'
-      }
-    })
+    // *** Remove token generation for POST as well, confirmation happens via GET ***
+    // We just need to return success after creating the user
+    console.log(`Successfully created unconfirmed user: ${email}`);
+    // Optionally, trigger the confirmation email sending here if desired
+    // For now, just return success, user needs to click the link manually
+    return res.status(200).json({
+      message: 'User created successfully. Please check your email to confirm.',
+      email
+      // No token or confirmUrl needed here anymore
+    });
 
-    if (linkError) {
-      console.error('Generate link error:', linkError)
-      return res.status(500).json({ error: linkError.message })
-    }
-
-    const actionLink = data?.properties?.action_link
-    if (!actionLink) {
-      console.error('No action_link found in response:', data)
-      return res.status(500).json({ error: 'No action_link found in response' })
-    }
-
-    // Extract token and create confirmation URL
-    let token
-    try {
-      const url = new URL(actionLink)
-      token = url.searchParams.get('token')
-      if (!token) {
-        console.error('No token found in action_link:', actionLink)
-        return res.status(500).json({ error: 'No token found in action_link' })
-      }
-
-      // Create the confirmation URL with all necessary parameters
-      const confirmUrl = new URL('https://subletnu.vercel.app/confirm')
-      confirmUrl.searchParams.set('email', email)
-      confirmUrl.searchParams.set('token', token)
-      confirmUrl.searchParams.set('type', 'signup')
-
-      return res.status(200).json({
-        token,
-        email,
-        type: 'signup',
-        confirmUrl: confirmUrl.toString()
-      })
-    } catch (err) {
-      console.error('Invalid action_link URL:', actionLink, err)
-      return res.status(500).json({ error: 'Invalid action_link URL' })
-    }
   } else {
     return res.status(405).json({ error: 'Only GET and POST allowed' })
   }

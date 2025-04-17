@@ -1,6 +1,5 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function useQuery() {
@@ -12,84 +11,45 @@ const ConfirmPage = () => {
   const navigate = useNavigate();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [message, setMessage] = useState("");
-  const verificationAttemptedRef = useRef(false);
 
   useEffect(() => {
-    if (verificationAttemptedRef.current) {
-      return;
-    }
-
     const email = query.get("email") || "";
-    const type = query.get("type") || "signup";
 
     if (!email) {
       setStatus("error");
       setMessage("Missing email from URL.");
-      verificationAttemptedRef.current = true;
       return;
     }
 
-    const verify = async () => {
-      if (verificationAttemptedRef.current) return;
-      verificationAttemptedRef.current = true;
-
+    const confirmEmailOnBackend = async () => {
       try {
         setStatus("loading");
-        setMessage("Generating verification token...");
+        setMessage("Confirming your email with the server...");
         const res = await fetch(`/api/generate-signup-token?email=${encodeURIComponent(email)}`);
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(`Failed to generate signup token: ${text}`);
-        }
+
         const result = await res.json();
-        if (!result.token) {
-          throw new Error(result.error || 'Failed to get token from backend');
-        }
-        const backendToken = result.token;
 
-        setMessage("Verifying email with token...");
-        const { data, error } = await supabase.auth.verifyOtp({
-          token: backendToken,
-          type: type as "signup" | "magiclink",
-          email
-        });
-
-        if (error) {
-          console.error("Verification error:", error);
-          setStatus("error");
-          setMessage(error.message || "Verification failed.");
-          if (error.message.includes('expired')) {
-            setTimeout(() => navigate("/auth"), 3000);
-          }
-        } else {
-          if (data?.session) {
-            await supabase.auth.setSession(data.session);
-            setStatus("success");
-            setMessage("Email verified and logged in! Redirecting...");
-            setTimeout(() => navigate("/"), 3000);
-          } else {
-            setStatus("success");
-            setMessage("Email verified, but please log in manually.");
-            setTimeout(() => navigate("/auth"), 3000);
-          }
+        if (!res.ok) {
+          const errorMessage = result?.error || `Server error: ${res.statusText}`;
+          throw new Error(errorMessage);
         }
+
+        setStatus("success");
+        setMessage(result?.message || "Email confirmed successfully! Please log in.");
+        setTimeout(() => navigate("/auth"), 3000);
+
       } catch (err: any) {
-        console.error("Verification error:", err);
+        console.error("Confirmation error:", err);
         setStatus("error");
-        setMessage(err.message.includes('Failed to generate signup token') || err.message.includes('Failed to get token')
-          ? err.message
-          : `Verification process failed: ${err.message}`);
-        if (err.message.includes('User not found')) {
+        setMessage(err.message || "Email confirmation failed.");
+        if (err.message?.includes('User not found')) {
           setTimeout(() => navigate('/auth?mode=signup'), 3000);
         } else {
           setTimeout(() => navigate('/auth'), 3000);
         }
       }
     };
-
-    if (!verificationAttemptedRef.current) {
-      verify();
-    }
+    confirmEmailOnBackend();
   }, [query, navigate]);
 
   return (
