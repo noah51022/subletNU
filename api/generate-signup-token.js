@@ -34,7 +34,17 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: linkError.message })
   }
 
-  const token = data?.action_link?.split('token=')[1]?.split('&')[0]
+  if (!data?.action_link) {
+    console.error('No action_link returned from generateLink:', data)
+    return res.status(500).json({ error: 'No action_link returned from Supabase.' })
+  }
+
+  const token = data.action_link.split('token=')[1]?.split('&')[0]
+
+  if (!token) {
+    console.error('Failed to extract token from action_link:', data.action_link)
+    return res.status(500).json({ error: 'Failed to extract token from action_link.' })
+  }
 
   return res.status(200).json({
     token,
