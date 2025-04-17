@@ -12,18 +12,32 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing email' })
   }
 
-  const { data, error } = await supabaseAdmin.auth.admin.generateLink({
+  // Step 1: Create user if not already created
+  const { error: createError } = await supabaseAdmin.auth.admin.createUser({
+    email,
+    email_confirm: false
+  })
+
+  if (createError && !createError.message.includes('already registered')) {
+    console.error('Create user error:', createError)
+    return res.status(500).json({ error: createError.message })
+  }
+
+  // Step 2: Generate signup token/link
+  const { data, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
     type: 'signup',
     email,
   })
 
-  if (error) {
-    console.error('Supabase error:', error)
-    return res.status(500).json({ error: error.message })
+  if (linkError) {
+    console.error('Generate link error:', linkError)
+    return res.status(500).json({ error: linkError.message })
   }
 
+  const token = data?.action_link?.split('token=')[1]?.split('&')[0]
+
   return res.status(200).json({
-    token: data?.action_link?.split('token=')[1]?.split('&')[0],
+    token,
     type: 'signup',
     email,
   })
