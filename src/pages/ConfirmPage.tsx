@@ -24,7 +24,9 @@ const ConfirmPage = () => {
     const confirmEmailOnBackend = async () => {
       try {
         setStatus("loading");
+        console.log("Status set to: loading");
         setMessage("Confirming your email with the server...");
+        console.log("Message set to: Confirming your email with the server...");
         const res = await fetch(`/api/generate-signup-token?email=${encodeURIComponent(email)}`);
 
         const result = await res.json();
@@ -35,13 +37,17 @@ const ConfirmPage = () => {
         }
 
         setStatus("success");
+        console.log("Status set to: success");
         setMessage(result?.message || "Email confirmed successfully! Please log in.");
+        console.log(`Message set to: ${result?.message || "Email confirmed successfully! Please log in."}`);
         setTimeout(() => navigate("/auth"), 3000);
 
       } catch (err: any) {
         console.error("Confirmation error:", err);
         setStatus("error");
+        console.log("Status set to: error");
         setMessage(err.message || "Email confirmation failed.");
+        console.log(`Message set to: ${err.message || "Email confirmation failed."}`);
         if (err.message?.includes('User not found')) {
           setTimeout(() => navigate('/auth?mode=signup'), 3000);
         } else {
