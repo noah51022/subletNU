@@ -22,9 +22,13 @@ const Confirm = () => {
     const verify = async () => {
       let token
       try {
-        const res = await fetch(`/api/generate-signup-token?email=${encodeURIComponent(email)}`)
+        const res = await fetch('/api/generate-signup-token?email=' + email)
+        if (!res.ok) {
+          const text = await res.text()
+          throw new Error(`Failed to generate signup token: ${text}`)
+        }
         const result = await res.json()
-        if (!res.ok || !result.token) throw new Error(result.error || 'Failed to get token')
+        if (!result.token) throw new Error(result.error || 'Failed to get token')
         token = result.token
       } catch (err) {
         setStatus(`Failed to generate signup token: ${err.message}`)

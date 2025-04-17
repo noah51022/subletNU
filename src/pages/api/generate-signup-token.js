@@ -7,7 +7,7 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 )
 
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   const { email } = req.query
 
   if (!email) {
