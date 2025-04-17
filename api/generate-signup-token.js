@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Initialize Supabase Admin client with the public URL env var
+// Initialize Supabase Admin client with the service role key
 const supabaseAdmin = createClient(
-  process.env.VITE_SUPABASE_URL || '',
+  process.env.SUPABASE_URL || '',
   process.env.SUPABASE_SERVICE_ROLE_KEY || ''
 )
 
@@ -17,8 +17,11 @@ export default async function handler(req, res) {
   })
 
   // Validate environment variables
-  if (!process.env.VITE_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    console.error('Missing required environment variables')
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('Missing required environment variables:', {
+      url: !!process.env.SUPABASE_URL,
+      key: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+    })
     return res.status(500).json({ error: 'Server configuration error' })
   }
 
@@ -32,18 +35,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'An email address is required' })
     }
     email = email.trim()
-
-    // First, check if the user exists and is unconfirmed
-    const { data: user, error: userError } = await supabaseAdmin.auth.admin.getUserByEmail(email)
-
-    if (userError) {
-      console.error('Error fetching user:', userError)
-      return res.status(500).json({ error: userError.message })
-    }
-
-    if (!user) {
-      return res.status(400).json({ error: 'User not found. Please sign up first.' })
-    }
 
     // Generate signup token for email confirmation
     const { data, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
