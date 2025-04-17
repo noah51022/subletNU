@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function useQuery() {
@@ -21,7 +22,8 @@ const ConfirmPage = () => {
       return;
     }
 
-    const confirmEmailOnBackend = async () => {
+    const confirmEmailAndLogin = async () => {
+      let backendMessage = "";
       try {
         setStatus("loading");
         console.log("Status set to: loading");
@@ -30,24 +32,55 @@ const ConfirmPage = () => {
         const res = await fetch(`/api/generate-signup-token?email=${encodeURIComponent(email)}`);
 
         const result = await res.json();
+        backendMessage = result?.message || "Processing...";
 
         if (!res.ok) {
           const errorMessage = result?.error || `Server error: ${res.statusText}`;
           throw new Error(errorMessage);
         }
 
-        setStatus("success");
-        console.log("Status set to: success");
-        setMessage(result?.message || "Email confirmed successfully! Please log in.");
-        console.log(`Message set to: ${result?.message || "Email confirmed successfully! Please log in."}`);
-        setTimeout(() => navigate("/auth"), 3000);
+        if (result.magicLinkToken) {
+          setMessage(backendMessage);
+          console.log(`Message set to: ${backendMessage}`);
+          console.log("Attempting login with magic link token...");
+
+          const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+            token: result.magicLinkToken,
+            type: 'magiclink',
+            email: email
+          });
+
+          if (verifyError) {
+            console.error("Magic link verification error:", verifyError);
+            throw new Error(verifyError.message || backendMessage || "Magic link login failed.");
+          }
+
+          if (verifyData?.session) {
+            console.log("Successfully logged in with magic link!");
+            setStatus("success");
+            console.log("Status set to: success");
+            setMessage("Successfully logged in! Redirecting...");
+            console.log("Message set to: Successfully logged in! Redirecting...");
+            setTimeout(() => navigate("/"), 3000);
+          } else {
+            console.warn("Magic link verified, but no session returned.");
+            throw new Error("Login successful, but no session found. Please try logging in manually.");
+          }
+        } else {
+          console.warn("Backend did not return a magic link token. Redirecting to login.");
+          setMessage(backendMessage);
+          console.log(`Message set to: ${backendMessage}`);
+          setStatus("success");
+          console.log("Status set to: success");
+          setTimeout(() => navigate("/auth"), 3000);
+        }
 
       } catch (err: any) {
-        console.error("Confirmation error:", err);
+        console.error("Confirmation/Login error:", err);
         setStatus("error");
         console.log("Status set to: error");
-        setMessage(err.message || "Email confirmation failed.");
-        console.log(`Message set to: ${err.message || "Email confirmation failed."}`);
+        setMessage(err.message || "An unexpected error occurred.");
+        console.log(`Message set to: ${err.message || "An unexpected error occurred."}`);
         if (err.message?.includes('User not found')) {
           setTimeout(() => navigate('/auth?mode=signup'), 3000);
         } else {
@@ -55,7 +88,7 @@ const ConfirmPage = () => {
         }
       }
     };
-    confirmEmailOnBackend();
+    confirmEmailAndLogin();
   }, [query, navigate]);
 
   return (
