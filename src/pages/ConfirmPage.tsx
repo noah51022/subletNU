@@ -46,6 +46,9 @@ const ConfirmPage = () => {
         if (error) {
           setStatus("error");
           setMessage(error.message || "Verification failed.");
+          if (error.message.includes('expired')) {
+            setTimeout(() => navigate("/auth"), 3000);
+          }
         } else {
           if (data?.session) {
             await supabase.auth.setSession(data.session);

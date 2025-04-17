@@ -26,22 +26,51 @@ export default async function handler(req, res) {
   let email = ''
 
   if (method === 'GET') {
-    // Confirmation flow: generate OTP token for existing user
+    // Confirmation flow: verify existing token
     email = req.query.email
-    console.log('[generate-signup-token] Processing email:', {
-      rawEmail: email,
-      type: typeof email,
-      isEmpty: !email,
-      trimmedEmpty: email && email.trim() === ''
-    })
-
     if (!email || typeof email !== 'string' || email.trim() === '') {
-      console.error('Invalid or missing email:', { email, type: typeof email })
       return res.status(400).json({ error: 'An email address is required' })
     }
     email = email.trim()
+
+    // For GET requests (email confirmation), we'll use email verification instead
+    const { data, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'magiclink',
+      email,
+      options: {
+        shouldSendEmail: false,
+        redirectTo: 'https://subletnu.vercel.app/confirm'
+      }
+    })
+
+    if (linkError) {
+      console.error('Generate link error:', linkError)
+      return res.status(500).json({ error: linkError.message })
+    }
+
+    const actionLink = data?.properties?.action_link
+    if (!actionLink) {
+      console.error('No action_link found in response:', data)
+      return res.status(500).json({ error: 'No action_link found in response' })
+    }
+
+    let token
+    try {
+      const url = new URL(actionLink)
+      token = url.searchParams.get('token')
+      if (!token) {
+        console.error('No token found in action_link:', actionLink)
+        return res.status(500).json({ error: 'No token found in action_link' })
+      }
+    } catch (err) {
+      console.error('Invalid action_link URL:', actionLink, err)
+      return res.status(500).json({ error: 'Invalid action_link URL' })
+    }
+
+    return res.status(200).json({ token, email, type: 'magiclink' })
+
   } else if (method === 'POST') {
-    // Signup flow: create user then generate OTP token
+    // Signup flow: create user then generate signup token
     const { firstName, lastName, email: bodyEmail, password } = JSON.parse(req.body || '{}')
     email = bodyEmail
     if (!firstName || !lastName || !email || !password) {
@@ -50,60 +79,56 @@ export default async function handler(req, res) {
     if (password.length < 6) {
       return res.status(400).json({ error: 'Password must be at least 6 characters' })
     }
-    // Create user unconfirmed (allow retry if already registered)
-    const { error: createError } = await supabaseAdmin.auth.admin.createUser({
+
+    // Create user unconfirmed
+    const { data: userData, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
       user_metadata: { first_name: firstName, last_name: lastName },
       email_confirm: false,
     })
+
     if (createError && !createError.message.includes('already registered')) {
       console.error('Create user error:', createError)
       return res.status(500).json({ error: createError.message })
     }
+
+    // Generate signup token
+    const { data, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'signup',
+      email,
+      options: {
+        shouldSendEmail: false,
+        redirectTo: 'https://subletnu.vercel.app/confirm'
+      }
+    })
+
+    if (linkError) {
+      console.error('Generate link error:', linkError)
+      return res.status(500).json({ error: linkError.message })
+    }
+
+    const actionLink = data?.properties?.action_link
+    if (!actionLink) {
+      console.error('No action_link found in response:', data)
+      return res.status(500).json({ error: 'No action_link found in response' })
+    }
+
+    let token
+    try {
+      const url = new URL(actionLink)
+      token = url.searchParams.get('token')
+      if (!token) {
+        console.error('No token found in action_link:', actionLink)
+        return res.status(500).json({ error: 'No token found in action_link' })
+      }
+    } catch (err) {
+      console.error('Invalid action_link URL:', actionLink, err)
+      return res.status(500).json({ error: 'Invalid action_link URL' })
+    }
+
+    return res.status(200).json({ token, email, type: 'signup' })
   } else {
     return res.status(405).json({ error: 'Only GET and POST allowed' })
   }
-
-  // Generate the OTP signup link using correct SDK signature
-  const { data, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-    type: 'signup',
-    email,
-    options: { shouldSendEmail: false, redirectTo: 'https://subletnu.vercel.app/confirm' }
-  })
-
-  // Debug: return raw Supabase generateLink response when GET & debug=true
-  if (method === 'GET' && req.query.debug === 'true') {
-    return res.status(200).json({ data, linkError })
-  }
-
-  // Debug: log the raw response
-  console.log('[generateLink] data:', data, 'error:', linkError)
-  if (linkError) {
-    console.error('Generate link error:', linkError)
-    return res.status(500).json({ error: linkError.message })
-  }
-
-  // Get action_link from the correct location in the response
-  const actionLink = data?.properties?.action_link
-  if (!actionLink) {
-    console.error('No action_link found in response:', data)
-    return res.status(500).json({ error: 'No action_link found in response' })
-  }
-
-  // Extract token
-  let token
-  try {
-    const url = new URL(actionLink)
-    token = url.searchParams.get('token')
-    if (!token) {
-      console.error('No token found in action_link:', actionLink)
-      return res.status(500).json({ error: 'No token found in action_link' })
-    }
-  } catch (err) {
-    console.error('Invalid action_link URL:', actionLink, err)
-    return res.status(500).json({ error: 'Invalid action_link URL' })
-  }
-
-  return res.status(200).json({ token, email, type: method === 'GET' ? 'magiclink' : 'signup' })
 }
