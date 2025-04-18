@@ -11,6 +11,7 @@ import { Drawer, DrawerContent, DrawerHeader } from "@/components/ui/drawer";
 import { Menu as MenuIcon, Home, PlusCircle, MessageSquare, User } from "lucide-react";
 import { useState } from "react";
 import Header from "@/components/Header";
+import { Button } from "@/components/ui/button";
 
 const HomePage = () => {
   const { currentUser } = useAuth();
@@ -29,7 +30,7 @@ const HomePage = () => {
   return (
     <div className="flex flex-col min-h-screen">
       <Header title="Home" />
-      <main className="flex-1 overflow-y-auto">
+      <main className={`flex-1 overflow-y-auto ${!isMobile ? 'pb-20' : ''}`}>
         <div className="mx-auto w-full max-w-[90%] md:max-w-4xl lg:max-w-6xl">
           <FilterBar />
           <div className="mt-4 pb-4">
@@ -47,6 +48,16 @@ const HomePage = () => {
                 <SubletCard key={sublet.id} sublet={sublet} />
               ))
             )}
+          </div>
+          {/* CTA Section */}
+          <div className="mt-8 py-6 text-center border-t border-gray-200">
+            <h3 className="text-lg font-semibold mb-2 text-gray-700">Want to list your own sublet?</h3>
+            <Button
+              onClick={() => navigate('/create')}
+              className="bg-neu-red hover:bg-neu-red/90"
+            >
+              Post Your Sublet
+            </Button>
           </div>
         </div>
       </main>
