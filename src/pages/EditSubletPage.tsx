@@ -401,10 +401,8 @@ const EditSubletPage = () => {
             inputValue={locationInputValue}
             setInputValue={setLocationInputValue}
             destinationCoordinates={NEU_COORDINATES}
+            placeholder="Start typing and select an address from the suggestions."
           />
-          <p className="text-xs text-gray-500 mt-1">
-            Start typing and select an address from the suggestions.
-          </p>
         </div>
 
         <div className="space-y-2">
@@ -548,19 +546,19 @@ const EditSubletPage = () => {
 
         <div className="space-y-2">
           <label htmlFor="description" className="text-sm font-medium">
-            Description (max 200 characters) *
+            Description (max 600 characters) *
           </label>
           <Textarea
             id="description"
             placeholder="Describe your sublet..."
-            maxLength={200}
+            maxLength={600}
             className="h-24"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             required
           />
           <div className="text-xs text-gray-500 text-right">
-            {description.length}/200
+            {description.length}/600
           </div>
         </div>
 

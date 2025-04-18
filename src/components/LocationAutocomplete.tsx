@@ -10,13 +10,15 @@ interface LocationAutocompleteProps {
   inputValue: string;
   setInputValue: (value: string) => void;
   destinationCoordinates: google.maps.LatLngLiteral;
+  placeholder?: string; // Add optional placeholder prop
 }
 
 const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
   onPlaceSelect,
   inputValue,
   setInputValue,
-  destinationCoordinates
+  destinationCoordinates,
+  placeholder, // Destructure placeholder
 }) => {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
   console.log('Google Maps API Key Status:', {
@@ -75,8 +77,11 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
           types: ['address']
         });
 
-        // Style the element
-        placeAutocomplete.className = 'w-full h-10 px-3 py-2 border border-input bg-background text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 rounded-md';
+        // Set the placeholder
+        placeAutocomplete.placeholder = placeholder || "Enter address"; // Use the passed placeholder or a default
+
+        // Style the element - Use simpler classes similar to CreateSubletPage fallback
+        placeAutocomplete.className = 'w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-neu-red';
 
         // Replace the current content with the new autocomplete element
         const currentContainer = document.getElementById('location-autocomplete-container');
@@ -142,7 +147,7 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
         });
       }
     }
-  }, [isLoaded, inputValue, onPlaceSelect, setInputValue, destinationCoordinates]);
+  }, [isLoaded, inputValue, onPlaceSelect, setInputValue, destinationCoordinates, placeholder]);
 
   // Effect to sync input value when parent state changes
   useEffect(() => {
