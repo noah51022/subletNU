@@ -45,77 +45,27 @@ export default async function handler(req, res) {
       }
 
       const user = users[0];
-      let userJustConfirmed = false; // Flag to track if we just confirmed the email
+      let userJustConfirmed = false;
 
       // Check if email needs confirmation
       if (!user.email_confirmed_at) {
         console.log(`Confirming email for user ${user.id}`);
-        // Update the user to confirm their email
         const { data: updatedUser, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
           user.id,
           { email_confirm: true }
         );
-        if (updateError) throw updateError; // Propagate error if update fails
+        if (updateError) throw updateError;
         console.log(`Successfully confirmed email for user ${user.id}`);
         userJustConfirmed = true;
       } else {
         console.log(`Email ${email} already confirmed for user ${user.id}`);
       }
 
-      // --- Generate Recovery Token --- 
-      console.log(`Generating recovery link for user ${user.id}`);
-      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-        type: 'recovery',
-        email: user.email,
-        options: {
-          // Redirect URL after successful magic link verification (optional, but good practice)
-          redirectTo: '/'
-        }
-      });
-
-      if (linkError) {
-        console.error(`Error generating recovery link for ${email}:`, linkError);
-        // If link generation fails after confirmation, return success but without token?
-        // Or return an error? Let's return success but indicate the link issue.
-        return res.status(500).json({
-          error: 'Email confirmed, but failed to generate login link.',
-          message: 'Email confirmed, but failed to generate login link. Please login manually.',
-          email
-        });
-      }
-
-      const actionLink = linkData?.properties?.action_link;
-      if (!actionLink) {
-        console.error('No action_link found in recovery link response:', linkData);
-        return res.status(500).json({
-          error: 'Email confirmed, but failed to retrieve login link.',
-          message: 'Email confirmed, but failed to retrieve login link. Please login manually.',
-          email
-        });
-      }
-
-      let recoveryToken;
-      try {
-        const url = new URL(actionLink);
-        recoveryToken = url.searchParams.get('token');
-        if (!recoveryToken) {
-          throw new Error('Token not found in recovery link URL');
-        }
-      } catch (parseErr) {
-        console.error('Error parsing recovery link URL:', parseErr);
-        return res.status(500).json({
-          error: 'Email confirmed, but failed to process login link.',
-          message: 'Email confirmed, but failed to process login link. Please login manually.',
-          email
-        });
-      }
-      // --- End Generate Recovery Token ---
-
-      console.log(`Returning recovery token for user ${user.id}`);
+      console.log(`Returning success message for user ${user.id}`);
       return res.status(200).json({
-        message: userJustConfirmed ? 'Email successfully confirmed. Logging you in...' : 'Email already confirmed. Logging you in...',
-        email: user.email,
-        recoveryToken
+        message: userJustConfirmed ? 'Email successfully confirmed. Please log in.' : 'Email already confirmed. Please log in.',
+        email: user.email
+        // No token returned
       });
 
     } catch (error) {
