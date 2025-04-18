@@ -4,11 +4,10 @@ import { useSublet } from "@/contexts/SubletContext";
 import SubletCard from "@/components/SubletCard";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Wifi, Dumbbell, Shield, Check, Loader2, Share, Link, ImageDown, MapPin } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { ArrowLeft, Wifi, Dumbbell, Shield, Check, Loader2, Share, Link, MapPin } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import * as htmlToImage from 'html-to-image';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,7 +29,6 @@ const SubletDetailPage = () => {
   const { sublets, isLoadingSublets } = useSublet();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const shareableContentRef = useRef<HTMLDivElement>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [locationCoords, setLocationCoords] = useState<Coordinates | null>(null);
   const [isGeocoding, setIsGeocoding] = useState(true);
@@ -97,52 +95,6 @@ const SubletDetailPage = () => {
       toast({
         title: "Error Copying Link",
         description: "Could not copy the link to your clipboard.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // Function to handle saving the sublet card as an image
-  const handleSaveImage = async () => {
-    if (!shareableContentRef.current) {
-      toast({
-        title: "Error",
-        description: "Could not find the content to generate image.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsProcessing(true);
-    toast({
-      title: "Generating Image...",
-      description: "Please wait while the image is created.",
-    });
-
-    try {
-      const dataUrl = await htmlToImage.toPng(shareableContentRef.current, {
-        pixelRatio: window.devicePixelRatio || 1,
-        backgroundColor: '#ffffff',
-      });
-
-      // Trigger download instead of sharing
-      const link = document.createElement('a');
-      link.download = `sublet-${sublet?.id || 'listing'}.png`;
-      link.href = dataUrl;
-      link.click();
-
-      toast({
-        title: "Image Saved!",
-        description: "The sublet image has been downloaded.",
-      });
-
-    } catch (err) {
-      console.error("Failed to generate or save image: ", err);
-      toast({
-        title: "Error Saving Image",
-        description: "Could not generate or save the image.",
         variant: "destructive",
       });
     } finally {
@@ -221,19 +173,12 @@ const SubletDetailPage = () => {
                 <Link className="h-4 w-4" />
                 <span>Share Link</span>
               </DropdownMenuItem>
-              <DropdownMenuItem
-                className="flex items-center gap-2 cursor-pointer"
-                onSelect={handleSaveImage}
-              >
-                <ImageDown className="h-4 w-4" />
-                <span>Save as Image</span>
-              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </header>
       </div>
       <div className="pb-20 max-w-2xl mx-auto">
-        <div className="p-4" ref={shareableContentRef}>
+        <div className="p-4">
           <SubletCard sublet={sublet} expanded={true} />
 
           <div className="mt-6 bg-white rounded-lg shadow p-4">
