@@ -1,5 +1,5 @@
-import React, { useRef, useEffect } from 'react';
-import { GoogleMap, LoadScript } from '@react-google-maps/api';
+import React, { useRef } from 'react';
+import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
 
 interface InteractiveMapProps {
   apiKey: string;
@@ -17,6 +17,8 @@ const defaultMapContainerStyle: React.CSSProperties = {
   borderRadius: '0.375rem', // Match existing rounded style
 };
 
+const libraries: ("marker")[] = ['marker']; // Define libraries array outside component
+
 const InteractiveMap: React.FC<InteractiveMapProps> = ({
   apiKey,
   center,
@@ -24,30 +26,6 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
   mapContainerStyle = defaultMapContainerStyle,
 }) => {
   const mapRef = useRef<google.maps.Map | null>(null);
-  const markerRef = useRef<any>(null);
-
-  useEffect(() => {
-    if (mapRef.current && (window as any).google?.maps?.marker?.AdvancedMarkerElement) {
-      // Remove previous marker if it exists
-      if (markerRef.current) {
-        markerRef.current.map = null;
-        markerRef.current = null;
-      }
-      // Create new AdvancedMarkerElement
-      const AdvancedMarkerElement = (window as any).google.maps.marker.AdvancedMarkerElement;
-      markerRef.current = new AdvancedMarkerElement({
-        map: mapRef.current,
-        position: center,
-      });
-    }
-    // Cleanup on unmount
-    return () => {
-      if (markerRef.current) {
-        markerRef.current.map = null;
-        markerRef.current = null;
-      }
-    };
-  }, [center]);
 
   if (!apiKey) {
     console.error("Google Maps API key is missing.");
@@ -57,7 +35,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
   return (
     <LoadScript
       googleMapsApiKey={apiKey}
-      libraries={['marker']}
+      libraries={libraries}
       loadingElement={<div style={mapContainerStyle} className="bg-gray-200 flex items-center justify-center text-gray-500">Loading Map...</div>}
       onError={(error) => {
         console.error("Error loading Google Maps script:", error);
@@ -74,7 +52,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
         }}
         onLoad={map => { mapRef.current = map; }}
       >
-        {/* AdvancedMarkerElement is added manually */}
+        <Marker position={center} />
       </GoogleMap>
     </LoadScript>
   );
