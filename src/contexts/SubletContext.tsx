@@ -216,33 +216,17 @@ export const SubletProvider = ({ children }: { children: ReactNode }) => {
           upsert: false,
         });
 
-      if (uploadError) {
-        console.error('Error uploading photo:', uploadError);
-        toast({
-          title: "Upload Error",
-          description: `Failed to upload ${file.name}: ${uploadError.message}`,
-          variant: "destructive",
-        });
-        return null;
-      }
+      if (uploadError) throw uploadError;
 
-      const { data } = supabase.storage
+      const { data: publicUrlData } = supabase.storage
         .from('sublet-photos')
         .getPublicUrl(filePath);
 
-      if (!data?.publicUrl) {
-        console.error('Error getting public URL for:', filePath);
-        toast({
-          title: "Upload Error",
-          description: `Could not get public URL for ${file.name}.`,
-          variant: "destructive",
-        });
-        return null;
+      if (!publicUrlData?.publicUrl) {
+        throw new Error('Failed to get public URL for the uploaded image.');
       }
 
-      console.log('Successfully uploaded:', data.publicUrl);
-      return data.publicUrl;
-
+      return publicUrlData.publicUrl;
     } catch (error: any) {
       console.error('Error in uploadPhoto function:', error);
       toast({

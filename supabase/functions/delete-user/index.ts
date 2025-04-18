@@ -54,86 +54,78 @@ serve(async (req) => {
       })
     }
 
-    console.log(`Attempting deletion for user ID: ${user.id}`);
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
 
-    // Create Supabase Admin client to perform administrative actions
-    const supabaseAdmin = createClient(
-      supabaseUrl,
-      supabaseServiceRoleKey
-    )
+    const user = data.record; // Assuming the trigger passes the user record
 
-    // --- Deletion Steps (in reverse order of dependency is often safer) ---
-
-    // 1. Delete associated sublets
-    console.log(`Deleting sublets for user ${user.id}...`);
-    const { error: deleteSubletsError } = await supabaseAdmin
-      .from('sublets')
-      .delete()
-      .eq('user_id', user.id)
-
-    if (deleteSubletsError) {
-      console.error(`Error deleting sublets for user ${user.id}:`, deleteSubletsError)
-      // Depending on requirements, you might want to stop or continue.
-      // We log and continue for now.
-    } else {
-      console.log(`Sublets deleted for user ${user.id}.`);
+    if (!user || !user.id) {
+      console.error('Invalid user data received from trigger', data);
+      return new Response('Invalid user data', { status: 400 });
     }
 
-    // 2. Delete messages where user is sender or receiver
-    console.log(`Deleting messages for user ${user.id}...`);
-    const { error: deleteMessagesError } = await supabaseAdmin
-      .from('messages')
-      .delete()
-      .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
+    try {
+      // 1. Delete associated Sublets
+      const { error: subletDeleteError } = await supabaseAdmin
+        .from('sublets')
+        .delete()
+        .eq('user_id', user.id);
+      if (subletDeleteError) {
+        console.error(`Error deleting sublets for user ${user.id}:`, subletDeleteError);
+        throw new Error(`Failed to delete sublets: ${subletDeleteError.message}`);
+      }
 
-    if (deleteMessagesError) {
-      console.error(`Error deleting messages for user ${user.id}:`, deleteMessagesError)
-      // Log and continue
-    } else {
-      console.log(`Messages deleted for user ${user.id}.`);
-    }
+      // 2. Delete associated Messages (both sent and received)
+      const { error: messageDeleteError } = await supabaseAdmin
+        .from('messages')
+        .delete()
+        .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`);
+      if (messageDeleteError) {
+        console.error(`Error deleting messages for user ${user.id}:`, messageDeleteError);
+        throw new Error(`Failed to delete messages: ${messageDeleteError.message}`);
+      }
 
-    // 3. Delete user profile
-    console.log(`Deleting profile for user ${user.id}...`);
-    const { error: deleteProfileError } = await supabaseAdmin
-      .from('profiles')
-      .delete()
-      .eq('id', user.id)
+      // 3. Delete User Profile
+      const { error: profileDeleteError } = await supabaseAdmin
+        .from('profiles')
+        .delete()
+        .eq('id', user.id);
+      if (profileDeleteError) {
+        console.error(`Error deleting profile for user ${user.id}:`, profileDeleteError);
+        // Decide if this is critical. If profile might not exist, maybe just log warning?
+        throw new Error(`Failed to delete profile: ${profileDeleteError.message}`);
+      }
 
-    if (deleteProfileError) {
-      console.error(`Error deleting profile for user ${user.id}:`, deleteProfileError)
-      // Log and continue
-    } else {
-      console.log(`Profile deleted for user ${user.id}.`);
-    }
+      // 4. Delete Auth User (This should trigger the function again, but the cascade should prevent infinite loops? Check Supabase docs)
+      // IMPORTANT: Ensure this doesn't cause an infinite loop. Test thoroughly.
+      // The trigger is likely on auth.users deletion, so deleting it here might re-trigger.
+      // A common pattern is to have a flag or check if deletion is already in progress.
+      // Alternatively, the function could be triggered by a different event (e.g., custom webhook).
+      // For now, assuming direct deletion is intended and safe.
+      const { error: authUserDeleteError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
+      if (authUserDeleteError) {
+        // If the user was already deleted (e.g., by cascade or race condition), this might error.
+        // Check for specific errors like "User not found"? 
+        console.error(`Error deleting auth user ${user.id}:`, authUserDeleteError);
+        throw new Error(`Failed to delete auth user: ${authUserDeleteError.message}`);
+      }
 
-    // 4. Delete the user from auth.users (requires admin privileges)
-    console.log(`Deleting auth user ${user.id}...`);
-    const { error: deleteAuthUserError } = await supabaseAdmin.auth.admin.deleteUser(user.id)
-
-    if (deleteAuthUserError) {
-      console.error(`CRITICAL Error deleting auth user ${user.id}:`, deleteAuthUserError)
-      // This is a critical failure, the function should report an error.
-      return new Response(JSON.stringify({ error: 'Failed to delete user authentication record.' }), {
+      return new Response(JSON.stringify({ message: `Successfully deleted user ${user.id} and associated data.` }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      });
+    } catch (error) {
+      console.error(`Critical error during user deletion process for ${user.id}:`, error);
+      return new Response(error.message || 'Internal Server Error', {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
-      })
-    } else {
-      console.log(`Auth user ${user.id} deleted.`);
+      });
     }
-
-    // --- Deletion Successful ---
-    console.log(`Successfully deleted user ${user.id}`);
-    return new Response(JSON.stringify({ message: 'User deleted successfully' }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 200,
-    })
-
   } catch (error) {
-    console.error('Error in delete-user function:', error)
-    return new Response(JSON.stringify({ error: error.message || 'Internal Server Error' }), {
+    // Catch errors in the initial setup (env vars, client creation)
+    console.error('Function setup error:', error);
+    return new Response(error.message || 'Function Setup Error', {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
-    })
+    });
   }
-}) 
+});

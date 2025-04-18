@@ -13,7 +13,6 @@ const ConfirmPage = () => {
 
   useEffect(() => {
     if (status !== 'loading') {
-      console.log(`Skipping effect run because status is: ${status}`);
       return;
     }
 
@@ -26,11 +25,9 @@ const ConfirmPage = () => {
     }
 
     const confirmEmailOnBackend = async () => {
+      setMessage("Confirming your email with the server...");
+
       try {
-        setStatus("loading");
-        console.log("Status set to: loading");
-        setMessage("Confirming your email with the server...");
-        console.log("Message set to: Confirming your email with the server...");
         const res = await fetch(`/api/generate-signup-token?email=${encodeURIComponent(email)}`);
 
         const result = await res.json();
@@ -40,20 +37,18 @@ const ConfirmPage = () => {
           throw new Error(errorMessage);
         }
 
-        setStatus("success");
-        console.log("Status set to: success");
-        setMessage(result?.message || "Email confirmed successfully! Please log in.");
-        console.log(`Message set to: ${result?.message || "Email confirmed successfully! Please log in."}`);
-
-        console.log("Redirecting to login page...");
-        setTimeout(() => navigate("/auth"), 3000);
-
+        if (result.success) {
+          setStatus("success");
+          setMessage(result?.message || "Email confirmed successfully! Please log in.");
+          setTimeout(() => {
+            navigate("/auth");
+          }, 3000);
+        } else {
+          throw new Error(result.message || "Failed to confirm email.");
+        }
       } catch (err: any) {
-        console.error("Confirmation error:", err);
         setStatus("error");
-        console.log("Status set to: error");
         setMessage(err.message || "An unexpected error occurred.");
-        console.log(`Message set to: ${err.message || "An unexpected error occurred."}`);
         if (err.message?.includes('User not found')) {
           setTimeout(() => navigate('/auth?mode=signup'), 3000);
         } else {
@@ -62,7 +57,6 @@ const ConfirmPage = () => {
       }
     };
 
-    console.log("Running confirmEmailOnBackend effect...");
     confirmEmailOnBackend();
   }, [query, navigate, status]);
 

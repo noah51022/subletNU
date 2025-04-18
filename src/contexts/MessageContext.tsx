@@ -222,8 +222,18 @@ export const MessageProvider = ({ children }: { children: ReactNode }) => {
         });
 
       try {
-        await messageChannel.subscribe();
-        console.log('Successfully subscribed to messages channel');
+        await messageChannel.subscribe((status, err) => {
+          if (err) {
+            console.error('Error subscribing to messages channel:', err);
+            toast({
+              title: "Realtime Error",
+              description: "Could not connect to messaging service.",
+              variant: "destructive",
+            });
+          } else {
+            // Successfully subscribed
+          }
+        });
         retryCount = 0;
 
         // Initial fetch of messages

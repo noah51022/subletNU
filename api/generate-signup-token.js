@@ -7,21 +7,8 @@ const supabaseAdmin = createClient(
 )
 
 export default async function handler(req, res) {
-  // Detailed request logging
-  console.log('[generate-signup-token] Full request details:', {
-    method: req.method,
-    query: req.query,
-    headers: req.headers,
-    email: req.query.email,
-    emailType: typeof req.query.email
-  })
-
   // Validate environment variables
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    console.error('Missing required environment variables:', {
-      url: !!process.env.SUPABASE_URL,
-      key: !!process.env.SUPABASE_SERVICE_ROLE_KEY
-    })
     return res.status(500).json({ error: 'Server configuration error' })
   }
 
@@ -49,19 +36,14 @@ export default async function handler(req, res) {
 
       // Check if email needs confirmation
       if (!user.email_confirmed_at) {
-        console.log(`Confirming email for user ${user.id}`);
         const { data: updatedUser, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
           user.id,
           { email_confirm: true }
         );
         if (updateError) throw updateError;
-        console.log(`Successfully confirmed email for user ${user.id}`);
         userJustConfirmed = true;
-      } else {
-        console.log(`Email ${email} already confirmed for user ${user.id}`);
       }
 
-      console.log(`Returning success message for user ${user.id}`);
       return res.status(200).json({
         message: userJustConfirmed ? 'Email successfully confirmed. Please log in.' : 'Email already confirmed. Please log in.',
         email: user.email
@@ -69,7 +51,6 @@ export default async function handler(req, res) {
       });
 
     } catch (error) {
-      console.error(`Error confirming email ${email}:`, error);
       // Provide a more specific error message if possible
       const errorMessage = error instanceof Error ? error.message : 'Internal server error during email confirmation';
       // Determine appropriate status code based on error type if needed
@@ -97,15 +78,10 @@ export default async function handler(req, res) {
     })
 
     if (createError) { // Don't need to check for 'already registered' here if listUsers above handles it
-      console.error('Create user error:', createError)
       return res.status(500).json({ error: createError.message })
     }
 
-    // *** Remove token generation for POST as well, confirmation happens via GET ***
     // We just need to return success after creating the user
-    console.log(`Successfully created unconfirmed user: ${email}`);
-    // Optionally, trigger the confirmation email sending here if desired
-    // For now, just return success, user needs to click the link manually
     return res.status(200).json({
       message: 'User created successfully. Please check your email to confirm.',
       email

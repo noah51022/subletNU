@@ -21,10 +21,6 @@ const LocationAutocomplete: React.FC<LocationAutocompleteProps> = ({
   placeholder, // Destructure placeholder
 }) => {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-  console.log('Google Maps API Key Status:', {
-    isDefined: !!apiKey,
-    length: apiKey?.length,
-  });
 
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: apiKey || '',
