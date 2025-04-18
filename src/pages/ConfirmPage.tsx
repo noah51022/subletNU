@@ -41,35 +41,35 @@ const ConfirmPage = () => {
           throw new Error(errorMessage);
         }
 
-        if (result.magicLinkToken) {
+        if (result.recoveryToken) {
           setMessage(backendMessage);
           console.log(`Message set to: ${backendMessage}`);
-          console.log("Attempting login with magic link token...");
+          console.log("Attempting login with recovery token...");
 
           const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
-            token: result.magicLinkToken,
-            type: 'magiclink',
+            token: result.recoveryToken,
+            type: 'recovery',
             email: email
           });
 
           if (verifyError) {
-            console.error("Magic link verification error:", verifyError);
-            throw new Error(verifyError.message || backendMessage || "Magic link login failed.");
+            console.error("Recovery token verification error:", verifyError);
+            throw new Error(verifyError.message || backendMessage || "Recovery token login failed.");
           }
 
           if (verifyData?.session) {
-            console.log("Successfully logged in with magic link!");
+            console.log("Successfully logged in with recovery token!");
             setStatus("success");
             console.log("Status set to: success");
             setMessage("Successfully logged in! Redirecting...");
             console.log("Message set to: Successfully logged in! Redirecting...");
             setTimeout(() => navigate("/"), 3000);
           } else {
-            console.warn("Magic link verified, but no session returned.");
+            console.warn("Recovery token verified, but no session returned.");
             throw new Error("Login successful, but no session found. Please try logging in manually.");
           }
         } else {
-          console.warn("Backend did not return a magic link token. Redirecting to login.");
+          console.warn("Backend did not return a recovery token. Redirecting to login.");
           setMessage(backendMessage);
           console.log(`Message set to: ${backendMessage}`);
           setStatus("success");

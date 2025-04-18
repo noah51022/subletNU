@@ -62,10 +62,10 @@ export default async function handler(req, res) {
         console.log(`Email ${email} already confirmed for user ${user.id}`);
       }
 
-      // --- Generate Magic Link Token --- 
-      console.log(`Generating magic link for user ${user.id}`);
+      // --- Generate Recovery Token --- 
+      console.log(`Generating recovery link for user ${user.id}`);
       const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-        type: 'magiclink',
+        type: 'recovery',
         email: user.email,
         options: {
           // Redirect URL after successful magic link verification (optional, but good practice)
@@ -74,7 +74,7 @@ export default async function handler(req, res) {
       });
 
       if (linkError) {
-        console.error(`Error generating magic link for ${email}:`, linkError);
+        console.error(`Error generating recovery link for ${email}:`, linkError);
         // If link generation fails after confirmation, return success but without token?
         // Or return an error? Let's return success but indicate the link issue.
         return res.status(500).json({
@@ -86,7 +86,7 @@ export default async function handler(req, res) {
 
       const actionLink = linkData?.properties?.action_link;
       if (!actionLink) {
-        console.error('No action_link found in magic link response:', linkData);
+        console.error('No action_link found in recovery link response:', linkData);
         return res.status(500).json({
           error: 'Email confirmed, but failed to retrieve login link.',
           message: 'Email confirmed, but failed to retrieve login link. Please login manually.',
@@ -94,28 +94,28 @@ export default async function handler(req, res) {
         });
       }
 
-      let magicLinkToken;
+      let recoveryToken;
       try {
         const url = new URL(actionLink);
-        magicLinkToken = url.searchParams.get('token');
-        if (!magicLinkToken) {
-          throw new Error('Token not found in magic link URL');
+        recoveryToken = url.searchParams.get('token');
+        if (!recoveryToken) {
+          throw new Error('Token not found in recovery link URL');
         }
       } catch (parseErr) {
-        console.error('Error parsing magic link URL:', parseErr);
+        console.error('Error parsing recovery link URL:', parseErr);
         return res.status(500).json({
           error: 'Email confirmed, but failed to process login link.',
           message: 'Email confirmed, but failed to process login link. Please login manually.',
           email
         });
       }
-      // --- End Generate Magic Link Token ---
+      // --- End Generate Recovery Token ---
 
-      console.log(`Returning magic link token for user ${user.id}`);
+      console.log(`Returning recovery token for user ${user.id}`);
       return res.status(200).json({
         message: userJustConfirmed ? 'Email successfully confirmed. Logging you in...' : 'Email already confirmed. Logging you in...',
         email: user.email,
-        magicLinkToken // Include the token in the response
+        recoveryToken
       });
 
     } catch (error) {
