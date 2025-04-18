@@ -100,12 +100,6 @@ const CreateSubletPage = () => {
     return () => clearTimeout(timeout);
   }, [useNewAutocomplete]);
 
-  useEffect(() => {
-    if (!currentUser) {
-      navigate('/auth', { state: { fromProtected: true } });
-    }
-  }, [currentUser, navigate]);
-
   // Cleanup object URLs on unmount or when files change
   useEffect(() => {
     const previews = photoPreviews; // Capture current previews
@@ -328,6 +322,18 @@ const CreateSubletPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // ADD THIS AUTHENTICATION CHECK:
+    if (!currentUser) {
+      navigate('/auth', { state: { fromProtected: true, intendedPath: '/create' } });
+      toast({
+        title: "Login Required",
+        description: "You need to log in or sign up to post a sublet.",
+        variant: "default",
+      });
+      return; // Stop submission process
+    }
+
     // Only require CAPTCHA in production
     if (import.meta.env.MODE !== 'development' && !captchaToken) {
       toast({
@@ -415,35 +421,6 @@ const CreateSubletPage = () => {
         }
       }
 
-      // Add user check
-      if (!currentUser) {
-        toast({ title: "Error", description: "User not logged in.", variant: "destructive" });
-        setIsSubmitting(false);
-        return;
-      }
-      // ... photo upload logic ...
-      const uploadedPhotoUrls: string[] = [];
-      for (const file of photoFiles) {
-        try {
-          const publicUrl = await uploadPhoto(file, currentUser.id);
-          if (publicUrl) {
-            uploadedPhotoUrls.push(publicUrl);
-          } else {
-            throw new Error(`Failed to upload ${file.name}.`);
-          }
-        } catch (uploadError) {
-          console.error("Error uploading photo:", uploadError);
-          toast({
-            title: "Photo Upload Error",
-            description: (uploadError as Error)?.message || `Failed to upload ${file.name}. Please try again.`,
-            variant: "destructive",
-          });
-          setIsSubmitting(false);
-          return;
-        }
-      }
-      // --- End Upload Photos ---
-
       // Use locationInputValue for the submission
       const distanceToSend = parseFloat(distanceFromNEU) || 0; // Default to 0 if parsing fails or it was "0"
 
@@ -454,7 +431,14 @@ const CreateSubletPage = () => {
         description,
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
-        photos: uploadedPhotoUrls,
+        photos: await Promise.all(photoFiles.map(async (file) => {
+          const publicUrl = await uploadPhoto(file, currentUser.id);
+          if (publicUrl) {
+            return publicUrl;
+          } else {
+            throw new Error(`Failed to upload ${file.name}.`);
+          }
+        })),
         genderPreference,
         pricingType,
         amenities,
@@ -504,8 +488,6 @@ const CreateSubletPage = () => {
       <ArrowLeft />
     </button>
   );
-
-  if (!currentUser) return null;
 
   return (
     <div className="flex flex-col min-h-screen">
