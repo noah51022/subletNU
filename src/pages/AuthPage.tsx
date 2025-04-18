@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
+import { Eye, EyeOff } from 'lucide-react';
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -16,6 +17,7 @@ const AuthPage = () => {
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const turnstileRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   const { login, register, currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -226,15 +228,26 @@ const AuthPage = () => {
                 <label htmlFor="password" className="text-sm font-medium">
                   Password
                 </label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={isLoading}
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
                 {!isLogin && (
                   <p className="text-xs text-gray-500">
                     Password must be at least 6 characters
@@ -274,20 +287,5 @@ const AuthPage = () => {
     </div>
   );
 };
-
-// CAPTCHA: Commented out for development
-/*
-// Add TypeScript declarations for Turnstile
-declare global {
-  interface Window {
-    turnstile: {
-      render: (container: string | HTMLElement, options: any) => string;
-      reset: (widgetId?: string) => void;
-      remove: (widgetId: string) => void;
-      getResponse: (widgetId: string) => string;
-    };
-  }
-}
-*/
 
 export default AuthPage;
