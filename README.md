@@ -30,6 +30,7 @@ This project is built with:
 - React
 - shadcn-ui
 - Tailwind CSS
+- Supabase
 - Resend (for emails)
 
 ## Security Items
