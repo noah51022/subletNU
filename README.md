@@ -1,7 +1,7 @@
 # Welcome to SubletNU!
 
 ## Project info
-
+As a student, finding reliable sublets can be difficult and cumbersome. There are lots of factors to consider when choosing the right one: price, distance from university, length of your stay, etc. SubletNU simplifies this by only allowing student-to-student connections and making it easy to see all the relevant information that you need to make a decision. 
 
 ## How can I edit this code?
 
@@ -9,31 +9,17 @@ Follow these steps:
 
 ```sh
 # Step 1: Clone the repository using the project's Git URL.
-git clone <URL>
+git clone <THIS_PROJECT_URL>
 
 # Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+cd subletNU
 
 # Step 3: Install the necessary dependencies.
-npm i
+npm install
 
 # Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
 
 ## What technologies are used for this project?
 
@@ -47,10 +33,10 @@ This project is built with:
 
 ## Security Items
 
--Input validation (frontend + backend/DB)
--Rate limiting (can be revisited if needed)
--CORS setup (production-only)
--HTTPS only (handled by Vercel/Supabase)
-Auth (CAPTCHA, RLS, etc.)
--Data (SQL injection, constraints, backups)
--Frontend (no secrets, XSS, lazy loading, etc.)
+- Input validation (frontend + backend/DB)
+- Rate limiting (can be revisited if needed)
+- CORS setup (production-only)
+- HTTPS only (handled by Vercel/Supabase)
+- Auth (CAPTCHA, RLS, etc.)
+- Data (SQL injection, constraints, backups)
+- Frontend (no secrets, XSS, lazy loading, etc.)
