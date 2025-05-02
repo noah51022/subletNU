@@ -12,12 +12,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { Drawer, DrawerContent, DrawerHeader } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
 import Header from "@/components/Header";
+import { Switch } from "@/components/ui/switch";
 
 const ProfilePage = () => {
   const { currentUser, logout } = useAuth();
   const [myListings, setMyListings] = useState<Sublet[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [userProfile, setUserProfile] = useState<{ first_name: string | null, last_name: string | null } | null>(null);
+  const [userProfile, setUserProfile] = useState<{
+    first_name: string | null,
+    last_name: string | null,
+    notify_new_listings: boolean
+  } | null>(null);
+  const [savingNotificationPreference, setSavingNotificationPreference] = useState(false);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -37,7 +43,7 @@ const ProfilePage = () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('first_name, last_name')
+        .select('first_name, last_name, notify_new_listings')
         .eq('id', currentUser.id)
         .single();
 
@@ -47,7 +53,10 @@ const ProfilePage = () => {
       }
 
       if (data) {
-        setUserProfile(data);
+        setUserProfile({
+          ...data,
+          notify_new_listings: data.notify_new_listings !== false // Default to true if null
+        });
       }
     } catch (error) {
       console.error('Failed to fetch user profile:', error);
@@ -193,6 +202,39 @@ const ProfilePage = () => {
     }
   };
 
+  const updateNotificationPreference = async (notify: boolean) => {
+    if (!currentUser) return;
+
+    setSavingNotificationPreference(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ notify_new_listings: notify })
+        .eq('id', currentUser.id);
+
+      if (error) {
+        console.error('Error updating notification preference:', error);
+        toast({
+          title: "Error",
+          description: "Failed to update notification preference",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setUserProfile(prev => prev ? { ...prev, notify_new_listings: notify } : null);
+
+      toast({
+        title: "Success",
+        description: `You will ${notify ? 'now' : 'no longer'} receive new listing notifications`,
+      });
+    } catch (error) {
+      console.error('Failed to update notification preference:', error);
+    } finally {
+      setSavingNotificationPreference(false);
+    }
+  };
+
   if (!currentUser) return null;
 
   const getDisplayName = () => {
@@ -313,6 +355,24 @@ const ProfilePage = () => {
                           "Please check your inbox to verify your email address."
                         }
                       </p>
+                    </div>
+
+                    <div className="p-4 border rounded-lg">
+                      <h3 className="font-medium mb-2">Notification Preferences</h3>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm">New listing notifications</p>
+                          <p className="text-xs text-gray-500 mb-2">
+                            Receive email notifications when new sublets are posted
+                          </p>
+                        </div>
+                        <Switch
+                          checked={userProfile?.notify_new_listings ?? true}
+                          onCheckedChange={updateNotificationPreference}
+                          disabled={savingNotificationPreference}
+                          className="data-[state=checked]:bg-neu-red"
+                        />
+                      </div>
                     </div>
 
                     <div className="p-4 border rounded-lg">

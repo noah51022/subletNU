@@ -54,6 +54,7 @@ export type Database = {
           first_name: string | null
           id: string
           last_name: string | null
+          notify_new_listings: boolean
         }
         Insert: {
           created_at?: string
@@ -61,6 +62,7 @@ export type Database = {
           first_name?: string | null
           id: string
           last_name?: string | null
+          notify_new_listings?: boolean
         }
         Update: {
           created_at?: string
@@ -68,6 +70,7 @@ export type Database = {
           first_name?: string | null
           id?: string
           last_name?: string | null
+          notify_new_listings?: boolean
         }
         Relationships: []
       }
