@@ -36,8 +36,8 @@ This project is built with:
 ## Security Items
 
 - Input validation (frontend + backend/DB)
-- Rate limiting (can be revisited if needed)
-- CORS setup (production-only)
+- Rate limiting
+- CORS setup
 - HTTPS only (handled by Vercel/Supabase)
 - Auth (CAPTCHA, RLS, etc.)
 - Data (SQL injection, constraints, backups)
