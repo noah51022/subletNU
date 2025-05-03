@@ -421,34 +421,83 @@ const CreateSubletPage = () => {
         }
       }
 
-      // Use locationInputValue for the submission
-      const distanceToSend = parseFloat(distanceFromNEU) || 0; // Default to 0 if parsing fails or it was "0"
+      // Parse distance 
+      const distanceToSend = parseFloat(distanceFromNEU) || 0;
 
-      await addSublet({
-        price: parseFloat(price),
-        location: locationInputValue, // Use the input value state
-        distanceFromNEU: distanceToSend, // Send the parsed number
-        description,
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        photos: await Promise.all(photoFiles.map(async (file) => {
-          const publicUrl = await uploadPhoto(file, currentUser.id);
-          if (publicUrl) {
-            return publicUrl;
-          } else {
-            throw new Error(`Failed to upload ${file.name}.`);
-          }
-        })),
-        genderPreference,
-        pricingType,
-        amenities,
-        noBrokersFee,
-        // Add handles to submission data
-        instagramHandle: instagramHandle.trim() || undefined, // Send undefined if empty
-        snapchatHandle: snapchatHandle.trim() || undefined,   // Send undefined if empty
-      });
+      // Upload photos first
+      const uploadedPhotos = await Promise.all(photoFiles.map(async (file) => {
+        const publicUrl = await uploadPhoto(file, currentUser.id);
+        if (publicUrl) {
+          return publicUrl;
+        } else {
+          throw new Error(`Failed to upload ${file.name}.`);
+        }
+      }));
 
-      navigate('/');
+      // Import Supabase client directly to avoid context issues
+      const { supabase } = await import('@/integrations/supabase/client');
+
+      // Insert the sublet directly
+      const { data, error } = await supabase
+        .from('sublets')
+        .insert({
+          user_id: currentUser.id,
+          price: parseFloat(price),
+          location: locationInputValue,
+          distance_from_neu: distanceToSend,
+          description,
+          start_date: startDate.toISOString(),
+          end_date: endDate.toISOString(),
+          photos: uploadedPhotos,
+          gender_preference: genderPreference,
+          pricing_type: pricingType,
+          amenities,
+          no_brokers_fee: noBrokersFee,
+          instagram_handle: instagramHandle.trim() || undefined,
+          snapchat_handle: snapchatHandle.trim() || undefined,
+        })
+        .select();
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to post your sublet",
+          variant: "destructive",
+        });
+        throw error;
+      }
+
+      // If we successfully created the sublet, navigate to its page
+      if (data && data.length > 0) {
+        const newSubletId = data[0].id;
+
+        // Attempt to trigger notifications (optional, won't block if it fails)
+        try {
+          await supabase.functions.invoke('send-new-listing-notification', {
+            body: { subletId: newSubletId }
+          });
+        } catch (notifyError) {
+          console.error("Error sending notifications:", notifyError);
+          // We don't fail on notification errors
+        }
+
+        // Navigate to the new sublet detail page
+        navigate(`/sublet/${newSubletId}`, {
+          state: { isNewlyCreated: true }
+        });
+
+        toast({
+          title: "Sublet Posted",
+          description: "Your sublet has been posted successfully.",
+        });
+      } else {
+        // This is unlikely, but handle just in case
+        navigate('/');
+        toast({
+          title: "Sublet Posted",
+          description: "Your sublet has been posted, but we couldn't find its ID.",
+        });
+      }
     } catch (error) {
       console.error("Error posting sublet:", error);
       toast({
@@ -488,6 +537,31 @@ const CreateSubletPage = () => {
       <ArrowLeft />
     </button>
   );
+
+  // Add this function to get the newly created sublet
+  const getNewlyCreatedSublet = async () => {
+    try {
+      // Access the sublets directly from context
+      const { sublets } = useSublet();
+
+      // Find the most recently created sublet by the current user
+      if (sublets && Array.isArray(sublets)) {
+        const userSublets = sublets.filter(
+          s => s.userId === currentUser?.id
+        );
+
+        // Sort by creation time, newest first
+        const sortedSublets = userSublets.sort((a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+
+        return sortedSublets[0]; // Return the newest sublet
+      }
+    } catch (error) {
+      console.error("Error fetching newly created sublet:", error);
+    }
+    return null;
+  };
 
   return (
     <div className="flex flex-col min-h-screen">

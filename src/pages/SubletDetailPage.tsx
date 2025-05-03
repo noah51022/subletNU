@@ -1,11 +1,11 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSublet } from "@/contexts/SubletContext";
 import SubletCard from "@/components/SubletCard";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Wifi, Dumbbell, Shield, Check, Loader2, Share, Link, MapPin } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import InteractiveMap from "@/components/InteractiveMap";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { supabase } from "@/integrations/supabase/client";
+import { Sublet } from "@/types";
 
 // Define type for coordinates
 interface Coordinates {
@@ -34,10 +36,104 @@ const SubletDetailPage = () => {
   const [isGeocoding, setIsGeocoding] = useState(true);
   const [geocodingError, setGeocodingError] = useState<string | null>(null);
   const isMobile = useIsMobile();
+  const location = useLocation();
+  const [showShareReminder, setShowShareReminder] = useState(false);
+  const shareButtonRef = useRef<HTMLButtonElement>(null);
+  const [directSublet, setDirectSublet] = useState<Sublet | null>(null);
+  const [isLoadingDirectSublet, setIsLoadingDirectSublet] = useState(false);
 
-  const sublet = !isLoadingSublets ? sublets.find(s => s.id === subletId) : undefined;
+  // Try to get the sublet from context first
+  const contextSublet = !isLoadingSublets ? sublets.find(s => s.id === subletId) : undefined;
+
+  // If sublet isn't in context, fetch it directly
+  useEffect(() => {
+    async function fetchSubletDirectly() {
+      if (!subletId || contextSublet || isLoadingSublets) return;
+
+      setIsLoadingDirectSublet(true);
+      try {
+        const { data, error } = await supabase
+          .from('sublets')
+          .select(`
+            *,
+            instagram_handle,
+            snapchat_handle
+          `)
+          .eq('id', subletId)
+          .single();
+
+        if (error) {
+          console.error('Error fetching sublet directly:', error);
+          setDirectSublet(null);
+          return;
+        }
+
+        if (data) {
+          // Get the user email
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('id', data.user_id)
+            .single();
+
+          const formattedSublet: Sublet = {
+            id: data.id,
+            userId: data.user_id,
+            userEmail: profileData?.email || "unknown@northeastern.edu",
+            price: data.price,
+            location: data.location,
+            distanceFromNEU: data.distance_from_neu,
+            startDate: data.start_date,
+            endDate: data.end_date,
+            description: data.description,
+            photos: data.photos,
+            createdAt: data.created_at,
+            genderPreference: data.gender_preference as "male" | "female" | "any",
+            pricingType: data.pricing_type as "firm" | "negotiable",
+            amenities: data.amenities || [],
+            noBrokersFee: data.no_brokers_fee || false,
+            instagramHandle: data.instagram_handle,
+            snapchatHandle: data.snapchat_handle,
+          };
+
+          setDirectSublet(formattedSublet);
+        }
+      } catch (err) {
+        console.error("Error fetching sublet:", err);
+      } finally {
+        setIsLoadingDirectSublet(false);
+      }
+    }
+
+    fetchSubletDirectly();
+  }, [subletId, contextSublet, isLoadingSublets]);
+
+  // Use either the context sublet or directly fetched sublet
+  const sublet = contextSublet || directSublet;
+  const isLoading = isLoadingSublets || isLoadingDirectSublet;
+
   const googleMapsApiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string; // Key for Maps JS API (InteractiveMap, Autocomplete)
   const geocodeApiKey = import.meta.env.VITE_GEOCODE_API_KEY as string; // Dedicated key for Geocoding API fetch call
+
+  // Check if this is a newly created sublet
+  useEffect(() => {
+    if (location.state?.isNewlyCreated) {
+      // Set a flag to show the share reminder 
+      setShowShareReminder(true);
+
+      // After 500ms, show toast notification
+      const timer = setTimeout(() => {
+        toast({
+          title: "Share Your Listing!",
+          description: "Your sublet was created successfully. Share the link with friends to find someone faster.",
+          variant: "default",
+          duration: 8000,
+        });
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [location.state, toast]);
 
   useEffect(() => {
     // Allow unauthenticated users to view this page
@@ -81,6 +177,24 @@ const SubletDetailPage = () => {
     }
   }, [sublet?.location]);
 
+  // Highlight the share button with a pulsing effect when viewing a newly created listing
+  useEffect(() => {
+    if (showShareReminder && shareButtonRef.current) {
+      // Add pulsing animation class to draw attention to share button
+      shareButtonRef.current.classList.add('animate-pulse-attention');
+
+      // Remove animation after 10 seconds
+      const timer = setTimeout(() => {
+        if (shareButtonRef.current) {
+          shareButtonRef.current.classList.remove('animate-pulse-attention');
+        }
+        setShowShareReminder(false);
+      }, 10000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [showShareReminder]);
+
   // Function to copy the listing link
   const handleShareLink = async () => {
     setIsProcessing(true);
@@ -102,7 +216,7 @@ const SubletDetailPage = () => {
     }
   };
 
-  if (isLoadingAuth || isLoadingSublets) {
+  if (isLoadingAuth || isLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-neu-red" />
@@ -157,10 +271,12 @@ const SubletDetailPage = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
+                ref={shareButtonRef}
                 disabled={isProcessing}
                 variant="ghost"
                 size="icon"
-                className="text-white hover:bg-neu-red/80 disabled:opacity-50"
+                className={`text-white hover:bg-neu-red/80 disabled:opacity-50 ${showShareReminder ? 'ring-2 ring-white ring-opacity-70' : ''
+                  }`}
               >
                 {isProcessing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Share />}
               </Button>
