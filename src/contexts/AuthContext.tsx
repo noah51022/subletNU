@@ -10,7 +10,7 @@ type AuthContextType = {
   session: Session | null;
   isLoadingAuth: boolean;
   login: (email: string, password: string) => Promise<boolean>;
-  register: (email: string, password: string, metadata?: { first_name?: string; last_name?: string; captcha_token?: string }) => Promise<boolean>;
+  register: (email: string, password: string, metadata?: { first_name?: string; last_name?: string; notify_new_listings?: boolean; captcha_token?: string }) => Promise<boolean>;
   logout: () => Promise<void>;
 };
 
@@ -113,7 +113,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const register = async (email: string, password: string, metadata?: { first_name?: string; last_name?: string; captcha_token?: string }): Promise<boolean> => {
+  const register = async (email: string, password: string, metadata?: { first_name?: string; last_name?: string; notify_new_listings?: boolean; captcha_token?: string }): Promise<boolean> => {
     if (!email.endsWith('@northeastern.edu')) {
       toast({
         title: "Invalid Email",
@@ -172,7 +172,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         options: {
           data: {
             first_name: metadata?.first_name,
-            last_name: metadata?.last_name
+            last_name: metadata?.last_name,
+            notify_new_listings: metadata?.notify_new_listings
           }
         }
       });

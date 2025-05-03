@@ -112,7 +112,7 @@ export const SubletProvider = ({ children }: { children: ReactNode }) => {
     if (!currentUser) return;
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('sublets')
         .insert({
           user_id: currentUser.id,
@@ -129,7 +129,8 @@ export const SubletProvider = ({ children }: { children: ReactNode }) => {
           no_brokers_fee: subletData.noBrokersFee,
           instagram_handle: subletData.instagramHandle,
           snapchat_handle: subletData.snapchatHandle,
-        });
+        })
+        .select();
 
       if (error) {
         toast({
@@ -138,6 +139,19 @@ export const SubletProvider = ({ children }: { children: ReactNode }) => {
           variant: "destructive",
         });
         throw error;
+      }
+
+      // Trigger notification for new listing if we have the sublet ID
+      if (data && data.length > 0) {
+        try {
+          // Call the edge function to notify users about the new listing
+          await supabase.functions.invoke('send-new-listing-notification', {
+            body: { subletId: data[0].id }
+          });
+        } catch (notifyError) {
+          console.error("Error sending notifications:", notifyError);
+          // We don't throw here as the sublet was created successfully
+        }
       }
 
       fetchSublets();

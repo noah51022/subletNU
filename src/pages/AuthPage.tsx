@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { Eye, EyeOff } from 'lucide-react';
+import { Checkbox } from "@/components/ui/checkbox";
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -13,6 +14,7 @@ const AuthPage = () => {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [notifyNewListings, setNotifyNewListings] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const turnstileRef = useRef<HTMLDivElement>(null);
@@ -122,6 +124,7 @@ const AuthPage = () => {
         const success = await register(email, password, {
           first_name: firstName,
           last_name: lastName,
+          notify_new_listings: notifyNewListings,
           captcha_token: import.meta.env.MODE !== 'development' ? captchaToken || undefined : undefined,
         });
         if (success) {
@@ -205,6 +208,21 @@ const AuthPage = () => {
                         disabled={isLoading}
                       />
                     </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="notifyNewListings"
+                      checked={notifyNewListings}
+                      onCheckedChange={(checked) => setNotifyNewListings(checked as boolean)}
+                      disabled={isLoading}
+                    />
+                    <label
+                      htmlFor="notifyNewListings"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      Notify me about new listings
+                    </label>
                   </div>
                 </>
               )}
