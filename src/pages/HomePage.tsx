@@ -16,7 +16,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const HomePage = () => {
   const { currentUser } = useAuth();
-  const { filteredSublets } = useFilter();
+  const { filteredSublets, isLoading } = useFilter();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -35,7 +35,7 @@ const HomePage = () => {
         <div className="mx-auto w-full max-w-[90%] md:max-w-4xl lg:max-w-6xl">
           <FilterBar />
           <div className="mt-4 pb-4">
-            {filteredSublets === undefined ? (
+            {isLoading ? (
               <div className="flex justify-center items-center py-20">
                 <Loader2 className="h-8 w-8 animate-spin text-neu-red" />
               </div>
