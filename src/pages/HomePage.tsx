@@ -12,6 +12,7 @@ import { Menu as MenuIcon, Home, PlusCircle, MessageSquare, User } from "lucide-
 import { useState } from "react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
+import { motion, AnimatePresence } from "framer-motion";
 
 const HomePage = () => {
   const { currentUser } = useAuth();
@@ -44,9 +45,18 @@ const HomePage = () => {
                 <p className="text-gray-500">Try adjusting your filters or check back later.</p>
               </div>
             ) : (
-              filteredSublets.map((sublet) => (
-                <SubletCard key={sublet.id} sublet={sublet} />
-              ))
+              <AnimatePresence initial={false}>
+                {filteredSublets.map((sublet) => (
+                  <motion.div
+                    key={sublet.id}
+                    layoutId={`sublet-card-${sublet.id}`}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => navigate(`/sublet/${sublet.id}`)}
+                  >
+                    <SubletCard sublet={sublet} />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             )}
           </div>
           {/* CTA Section */}

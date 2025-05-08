@@ -18,6 +18,7 @@ import InteractiveMap from "@/components/InteractiveMap";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { Sublet } from "@/types";
+import { motion } from "framer-motion";
 
 // Define type for coordinates
 interface Coordinates {
@@ -295,7 +296,9 @@ const SubletDetailPage = () => {
       </div>
       <div className="pb-20 max-w-2xl mx-auto">
         <div className="p-4">
-          <SubletCard sublet={sublet} expanded={true} />
+          <motion.div layoutId={`sublet-card-${sublet.id}`}>
+            <SubletCard sublet={sublet} expanded={true} />
+          </motion.div>
 
           <div className="mt-6 bg-white rounded-lg shadow p-4">
             <h2 className="text-lg font-bold mb-3">Amenities</h2>
