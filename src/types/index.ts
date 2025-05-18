@@ -31,3 +31,10 @@ export interface Message {
   text: string;
   timestamp: string;
 }
+
+export interface SavedListing {
+  id: string;
+  userId: string;
+  listingId: string;
+  createdAt: string;
+}
