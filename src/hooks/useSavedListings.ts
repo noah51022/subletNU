@@ -15,11 +15,11 @@ interface UseSavedListingsReturn {
 }
 
 // Helper function to transform database sublet to frontend Sublet type
-const transformSubletData = (dbSublet: any, savedAt?: string): Sublet => {
+const transformSubletData = (dbSublet: any, userEmail?: string, savedAt?: string): Sublet => {
   return {
     id: dbSublet.id,
     userId: dbSublet.user_id,
-    userEmail: '', // This would need to be joined if needed
+    userEmail: userEmail || '', // Use the provided email or empty string as fallback
     price: dbSublet.price,
     location: dbSublet.location,
     distanceFromNEU: dbSublet.distance_from_neu,
@@ -75,10 +75,27 @@ export const useSavedListings = (): UseSavedListingsReturn => {
 
       if (error) throw error;
 
-      // Transform the data to include saved_at timestamp
-      const listings = data?.map(item => 
-        transformSubletData(item.sublets, item.created_at)
-      ) || [];
+      // Transform the data to include saved_at timestamp and fetch user emails
+      const listings = await Promise.all(
+        (data || []).map(async (item) => {
+          const subletData = item.sublets;
+          
+          // Fetch the user email for this sublet
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('id', subletData.user_id)
+            .single();
+          
+          const userEmail = profileData?.email || "unknown@northeastern.edu";
+          
+          return transformSubletData(
+            subletData, 
+            userEmail,
+            item.created_at
+          );
+        })
+      );
 
       setSavedListings(listings);
     } catch (err: any) {
@@ -201,7 +218,16 @@ export const useSavedListings = (): UseSavedListingsReturn => {
         }
 
         if (listingData) {
-          const transformedListing = transformSubletData(listingData, new Date().toISOString());
+          // Fetch the user email for this sublet
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('id', listingData.user_id)
+            .single();
+          
+          const userEmail = profileData?.email || "unknown@northeastern.edu";
+          
+          const transformedListing = transformSubletData(listingData, userEmail, new Date().toISOString());
           // Replace the placeholder with actual data
           setSavedListings(prev => prev.map(listing => 
             listing.id === listingId ? transformedListing : listing
