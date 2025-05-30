@@ -8,8 +8,14 @@ export default defineConfig(({ mode }) => ({
   base: '/',
   server: {
     host: '0.0.0.0',
-    port: 5173,
-    strictPort: true,
+    port: 3002,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
     headers: {
       'Content-Security-Policy': [
         "default-src 'self' https://subletnu.vercel.app",

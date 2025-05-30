@@ -4,7 +4,7 @@ import { useSublet } from "@/contexts/SubletContext";
 import SubletCard from "@/components/SubletCard";
 import BottomNav from "@/components/BottomNav";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Wifi, Dumbbell, Shield, Check, Loader2, Share, Link, MapPin } from "lucide-react";
+import { ArrowLeft, Wifi, Dumbbell, Shield, Check, Loader2, Share, Link, MapPin, Heart } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -19,6 +19,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { supabase } from "@/integrations/supabase/client";
 import { Sublet } from "@/types";
 import { motion } from "framer-motion";
+import { useSavedListings } from '@/hooks/useSavedListings';
 
 // Define type for coordinates
 interface Coordinates {
@@ -32,7 +33,13 @@ const SubletDetailPage = () => {
   const { sublets, isLoadingSublets } = useSublet();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isProcessing, setIsProcessing] = useState(false);
+  const { isSaved, toggleSave } = useSavedListings();
+
+  // Local state for direct sublet fetching
+  const [directSublet, setDirectSublet] = useState<Sublet | null>(null);
+  const [isLoadingDirectSublet, setIsLoadingDirectSublet] = useState(false);
+
+  const [isProcessingShare, setIsProcessingShare] = useState(false);
   const [locationCoords, setLocationCoords] = useState<Coordinates | null>(null);
   const [isGeocoding, setIsGeocoding] = useState(true);
   const [geocodingError, setGeocodingError] = useState<string | null>(null);
@@ -40,73 +47,78 @@ const SubletDetailPage = () => {
   const location = useLocation();
   const [showShareReminder, setShowShareReminder] = useState(false);
   const shareButtonRef = useRef<HTMLButtonElement>(null);
-  const [directSublet, setDirectSublet] = useState<Sublet | null>(null);
-  const [isLoadingDirectSublet, setIsLoadingDirectSublet] = useState(false);
 
-  // Try to get the sublet from context first
-  const contextSublet = !isLoadingSublets ? sublets.find(s => s.id === subletId) : undefined;
+  // Get sublet from context if available, otherwise use direct fetch
+  const contextSublet = subletId ? sublets.find(s => s.id === subletId) : null;
 
-  // If sublet isn't in context, fetch it directly
-  useEffect(() => {
-    async function fetchSubletDirectly() {
-      if (!subletId || contextSublet || isLoadingSublets) return;
+  // Function to fetch sublet directly if not in context
+  const fetchSubletDirectly = async (id: string) => {
+    setIsLoadingDirectSublet(true);
+    try {
+      const { data, error } = await supabase
+        .from('sublets')
+        .select(`
+          *,
+          instagram_handle,
+          snapchat_handle
+        `)
+        .eq('id', id)
+        .single();
 
-      setIsLoadingDirectSublet(true);
-      try {
-        const { data, error } = await supabase
-          .from('sublets')
-          .select(`
-            *,
-            instagram_handle,
-            snapchat_handle
-          `)
-          .eq('id', subletId)
+      if (error) {
+        console.error('Error fetching sublet directly:', error);
+        setDirectSublet(null);
+        return;
+      }
+
+      if (data) {
+        // Get the user email
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('id', data.user_id)
           .single();
 
-        if (error) {
-          console.error('Error fetching sublet directly:', error);
-          setDirectSublet(null);
-          return;
-        }
+        const formattedSublet: Sublet = {
+          id: data.id,
+          userId: data.user_id,
+          userEmail: profileData?.email || "unknown@northeastern.edu",
+          price: data.price,
+          location: data.location,
+          distanceFromNEU: data.distance_from_neu,
+          startDate: data.start_date,
+          endDate: data.end_date,
+          description: data.description,
+          photos: data.photos,
+          createdAt: data.created_at,
+          genderPreference: data.gender_preference as "male" | "female" | "any",
+          pricingType: data.pricing_type as "firm" | "negotiable",
+          amenities: data.amenities || [],
+          noBrokersFee: data.no_brokers_fee || false,
+          instagramHandle: data.instagram_handle,
+          snapchatHandle: data.snapchat_handle,
+        };
 
-        if (data) {
-          // Get the user email
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('email')
-            .eq('id', data.user_id)
-            .single();
-
-          const formattedSublet: Sublet = {
-            id: data.id,
-            userId: data.user_id,
-            userEmail: profileData?.email || "unknown@northeastern.edu",
-            price: data.price,
-            location: data.location,
-            distanceFromNEU: data.distance_from_neu,
-            startDate: data.start_date,
-            endDate: data.end_date,
-            description: data.description,
-            photos: data.photos,
-            createdAt: data.created_at,
-            genderPreference: data.gender_preference as "male" | "female" | "any",
-            pricingType: data.pricing_type as "firm" | "negotiable",
-            amenities: data.amenities || [],
-            noBrokersFee: data.no_brokers_fee || false,
-            instagramHandle: data.instagram_handle,
-            snapchatHandle: data.snapchat_handle,
-          };
-
-          setDirectSublet(formattedSublet);
-        }
-      } catch (err) {
-        console.error("Error fetching sublet:", err);
-      } finally {
-        setIsLoadingDirectSublet(false);
+        setDirectSublet(formattedSublet);
       }
+    } catch (err) {
+      console.error("Error fetching sublet:", err);
+    } finally {
+      setIsLoadingDirectSublet(false);
+    }
+  };
+
+  useEffect(() => {
+    // If we have the sublet in context, we're good
+    if (contextSublet) {
+      setDirectSublet(null);
+      return;
     }
 
-    fetchSubletDirectly();
+    // Otherwise, fetch directly
+    if (subletId && !isLoadingSublets) {
+      fetchSubletDirectly(subletId);
+    }
   }, [subletId, contextSublet, isLoadingSublets]);
 
   // Use either the context sublet or directly fetched sublet
@@ -198,7 +210,8 @@ const SubletDetailPage = () => {
 
   // Function to copy the listing link
   const handleShareLink = async () => {
-    setIsProcessing(true);
+    if (isProcessingShare) return;
+    setIsProcessingShare(true);
     try {
       await navigator.clipboard.writeText(window.location.href);
       toast({
@@ -213,8 +226,23 @@ const SubletDetailPage = () => {
         variant: "destructive",
       });
     } finally {
-      setIsProcessing(false);
+      setIsProcessingShare(false);
     }
+  };
+
+  const handleToggleSave = async () => {
+    if (!currentUser) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to save listings.",
+        variant: "default",
+        action: <Button onClick={() => navigate('/auth')}>Login</Button>
+      });
+      return;
+    }
+    if (!sublet) return;
+
+    await toggleSave(sublet.id);
   };
 
   if (isLoadingAuth || isLoading) {
@@ -269,29 +297,41 @@ const SubletDetailPage = () => {
             </Button>
             <h1 className="text-xl font-bold ml-2">Sublet Details</h1>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                ref={shareButtonRef}
-                disabled={isProcessing}
-                variant="ghost"
-                size="icon"
-                className={`text-white hover:bg-neu-red/80 disabled:opacity-50 ${showShareReminder ? 'ring-2 ring-white ring-opacity-70' : ''
-                  }`}
-              >
-                {isProcessing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Share />}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                className="flex items-center gap-2 cursor-pointer"
-                onSelect={handleShareLink}
-              >
-                <Link className="h-4 w-4" />
-                <span>Share Link</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-1">
+            <Button
+              onClick={handleToggleSave}
+              disabled={isLoading}
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-neu-red/80 disabled:opacity-50"
+              aria-label={isSaved ? "Unsave this listing" : "Save this listing"}
+            >
+              <Heart className="h-5 w-5" fill={isSaved ? "currentColor" : "none"} />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  ref={shareButtonRef}
+                  disabled={isProcessingShare}
+                  variant="ghost"
+                  size="icon"
+                  className={`text-white hover:bg-neu-red/80 disabled:opacity-50 ${showShareReminder ? 'ring-2 ring-white ring-opacity-70' : ''
+                    }`}
+                >
+                  {isProcessingShare ? <Loader2 className="h-5 w-5 animate-spin" /> : <Share />}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  className="flex items-center gap-2 cursor-pointer"
+                  onSelect={handleShareLink}
+                >
+                  <Link className="h-4 w-4" />
+                  <span>Share Link</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </header>
       </div>
       <div className="pb-20 max-w-2xl mx-auto">

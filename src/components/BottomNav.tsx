@@ -1,4 +1,4 @@
-import { Home, PlusCircle, MessageSquare, User } from "lucide-react";
+import { Home, PlusCircle, MessageSquare, User, Heart } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useMessage } from "@/contexts/MessageContext";
 
@@ -37,6 +37,14 @@ const BottomNav = () => {
         {totalUnreadCount > 0 && (
           <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-neu-red ring-2 ring-white" />
         )}
+      </button>
+
+      <button
+        className={`nav-item ${pathname === '/saved-listings' ? 'active' : ''}`}
+        onClick={() => navigate('/saved-listings')}
+      >
+        <Heart size={24} />
+        <span className="text-xs mt-1">Saved</span>
       </button>
 
       <button

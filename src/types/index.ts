@@ -22,6 +22,7 @@ export interface Sublet {
   noBrokersFee?: boolean;
   instagramHandle?: string;
   snapchatHandle?: string;
+  saved_at?: string;
 }
 
 export interface Message {
