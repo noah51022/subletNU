@@ -17,6 +17,7 @@ import MessagesPage from "./pages/MessagesPage";
 import ProfilePage from "./pages/ProfilePage";
 import NotFound from "./pages/NotFound";
 import ConfirmPage from "./pages/ConfirmPage";
+import SavedListingsPage from "./pages/SavedListingsPage";
 
 // Create a client
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => {
               <Route path="/sublet/:subletId" element={<SubletDetailPage />} />
               <Route path="/edit/:subletId" element={<EditSubletPage />} />
               <Route path="/confirm" element={<ConfirmPage />} />
+              <Route path="/saved-listings" element={<SavedListingsPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </TooltipProvider>

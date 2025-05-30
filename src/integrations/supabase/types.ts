@@ -74,6 +74,42 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_listings: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+          listing_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id: string
+          listing_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+          listing_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_listings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_listings_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "sublets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sublets: {
         Row: {
           amenities: string[] | null
