@@ -33,7 +33,7 @@ const SubletDetailPage = () => {
   const { sublets, isLoadingSublets } = useSublet();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isSaved, toggleSave } = useSavedListings();
+  const { isSaved, isSaving, toggleSave } = useSavedListings();
 
   // Local state for direct sublet fetching
   const [directSublet, setDirectSublet] = useState<Sublet | null>(null);
@@ -300,13 +300,13 @@ const SubletDetailPage = () => {
           <div className="flex items-center gap-1">
             <Button
               onClick={handleToggleSave}
-              disabled={isLoading}
+              disabled={isLoading || isSaving(sublet.id)}
               variant="ghost"
               size="icon"
               className="text-white hover:bg-neu-red/80 disabled:opacity-50"
-              aria-label={isSaved ? "Unsave this listing" : "Save this listing"}
+              aria-label={isSaved(sublet.id) ? "Unsave this listing" : "Save this listing"}
             >
-              <Heart className="h-5 w-5" fill={isSaved ? "currentColor" : "none"} />
+              <Heart className="h-5 w-5" fill={isSaved(sublet.id) ? "currentColor" : "none"} />
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

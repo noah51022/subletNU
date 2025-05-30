@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -9,6 +9,7 @@ interface UseSavedListingsReturn {
   isLoading: boolean;
   error: string | null;
   isSaved: (listingId: string) => boolean;
+  isSaving: (listingId: string) => boolean;
   toggleSave: (listingId: string) => Promise<void>;
   refetch: () => Promise<void>;
 }
@@ -45,6 +46,11 @@ export const useSavedListings = (): UseSavedListingsReturn => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savingStates, setSavingStates] = useState<Record<string, boolean>>({});
+  
+  // Track intended save states and operation IDs
+  const intendedStatesRef = useRef<Record<string, boolean>>({});
+  const operationIdsRef = useRef<Record<string, number>>({});
+  const nextOperationIdRef = useRef(1);
 
   // Fetch all saved listings for the current user
   const fetchSavedListings = useCallback(async () => {
@@ -86,10 +92,15 @@ export const useSavedListings = (): UseSavedListingsReturn => {
 
   // Check if a specific listing is saved
   const isSaved = useCallback((listingId: string): boolean => {
+    // First check if there's an intended state (for ongoing operations)
+    if (listingId in intendedStatesRef.current) {
+      return intendedStatesRef.current[listingId];
+    }
+    // Otherwise check actual saved listings
     return savedListings.some(listing => listing.id === listingId);
   }, [savedListings]);
 
-  // Toggle save state for a listing with optimistic updates
+  // Toggle save state for a listing with improved race condition handling
   const toggleSave = useCallback(async (listingId: string) => {
     if (!currentUser) {
       toast({
@@ -100,36 +111,56 @@ export const useSavedListings = (): UseSavedListingsReturn => {
       return;
     }
 
-    if (savingStates[listingId]) {
-      return; // Already processing this listing
-    }
+    // Generate a unique operation ID
+    const operationId = nextOperationIdRef.current++;
+    operationIdsRef.current[listingId] = operationId;
 
-    const isCurrentlySaved = isSaved(listingId);
+    // Determine current and intended states
+    const currentState = savedListings.some(listing => listing.id === listingId);
+    const intendedState = !currentState;
     
-    // Optimistic update
+    // Set intended state immediately
+    intendedStatesRef.current[listingId] = intendedState;
+    
+    // Set loading state
     setSavingStates(prev => ({ ...prev, [listingId]: true }));
     
-    if (isCurrentlySaved) {
-      // Optimistically remove from saved listings
+    // Optimistic update
+    if (intendedState) {
+      // Adding to saved listings
+      const placeholder: Sublet = {
+        id: listingId,
+        userId: currentUser.id,
+        userEmail: '',
+        price: 0,
+        location: '',
+        distanceFromNEU: 0,
+        description: '',
+        startDate: '',
+        endDate: '',
+        photos: [],
+        createdAt: new Date().toISOString(),
+        genderPreference: 'any',
+        pricingType: 'firm',
+        amenities: [],
+        noBrokersFee: false,
+        instagramHandle: '',
+        snapchatHandle: '',
+        saved_at: new Date().toISOString(),
+      };
+      setSavedListings(prev => [placeholder, ...prev.filter(listing => listing.id !== listingId)]);
+    } else {
+      // Removing from saved listings
       setSavedListings(prev => prev.filter(listing => listing.id !== listingId));
     }
 
     try {
-      if (isCurrentlySaved) {
-        // Remove from saved listings
-        const { error } = await supabase
-          .from('saved_listings')
-          .delete()
-          .eq('user_id', currentUser.id)
-          .eq('listing_id', listingId);
+      // Check if this operation is still the latest for this listing
+      if (operationIdsRef.current[listingId] !== operationId) {
+        return; // This operation was superseded by a newer one
+      }
 
-        if (error) throw error;
-
-        toast({
-          title: "Listing Unsaved",
-          description: "This listing has been removed from your saved items.",
-        });
-      } else {
+      if (intendedState) {
         // Add to saved listings
         const { error } = await supabase
           .from('saved_listings')
@@ -137,6 +168,11 @@ export const useSavedListings = (): UseSavedListingsReturn => {
             user_id: currentUser.id,
             listing_id: listingId,
           });
+
+        // Check if this operation is still the latest
+        if (operationIdsRef.current[listingId] !== operationId) {
+          return;
+        }
 
         if (error) {
           // Handle unique constraint violation (already saved)
@@ -159,41 +195,78 @@ export const useSavedListings = (): UseSavedListingsReturn => {
           .eq('id', listingId)
           .single();
 
+        // Check if this operation is still the latest
+        if (operationIdsRef.current[listingId] !== operationId) {
+          return;
+        }
+
         if (listingData) {
           const transformedListing = transformSubletData(listingData, new Date().toISOString());
-          setSavedListings(prev => [transformedListing, ...prev]);
+          // Replace the placeholder with actual data
+          setSavedListings(prev => prev.map(listing => 
+            listing.id === listingId ? transformedListing : listing
+          ));
         }
 
         toast({
           title: "Listing Saved",
           description: "This listing has been added to your saved items.",
         });
+      } else {
+        // Remove from saved listings
+        const { error } = await supabase
+          .from('saved_listings')
+          .delete()
+          .eq('user_id', currentUser.id)
+          .eq('listing_id', listingId);
+
+        // Check if this operation is still the latest
+        if (operationIdsRef.current[listingId] !== operationId) {
+          return;
+        }
+
+        if (error) throw error;
+
+        toast({
+          title: "Listing Unsaved",
+          description: "This listing has been removed from your saved items.",
+        });
       }
     } catch (err: any) {
+      // Check if this operation is still the latest before handling errors
+      if (operationIdsRef.current[listingId] !== operationId) {
+        return;
+      }
+      
       console.error('Error toggling save state:', err);
       
       // Revert optimistic update on error
-      if (isCurrentlySaved) {
+      if (intendedState) {
+        // Remove the optimistically added placeholder
+        setSavedListings(prev => prev.filter(listing => listing.id !== listingId));
+      } else {
         // Re-add the listing back
         await fetchSavedListings();
-      } else {
-        // Remove the optimistically added listing
-        setSavedListings(prev => prev.filter(listing => listing.id !== listingId));
       }
 
       toast({
         title: "Error",
-        description: err.message || `Failed to ${isCurrentlySaved ? 'unsave' : 'save'} listing`,
+        description: err.message || `Failed to ${intendedState ? 'save' : 'unsave'} listing`,
         variant: "destructive",
       });
     } finally {
-      setSavingStates(prev => {
-        const newState = { ...prev };
-        delete newState[listingId];
-        return newState;
-      });
+      // Clean up only if this is still the active operation
+      if (operationIdsRef.current[listingId] === operationId) {
+        delete operationIdsRef.current[listingId];
+        delete intendedStatesRef.current[listingId];
+        setSavingStates(prev => {
+          const newState = { ...prev };
+          delete newState[listingId];
+          return newState;
+        });
+      }
     }
-  }, [currentUser, isSaved, toast, fetchSavedListings]);
+  }, [currentUser, savedListings, toast, fetchSavedListings]);
 
   // Fetch saved listings when user changes
   useEffect(() => {
@@ -205,6 +278,7 @@ export const useSavedListings = (): UseSavedListingsReturn => {
     isLoading,
     error,
     isSaved,
+    isSaving: (listingId: string) => savingStates[listingId] || false,
     toggleSave,
     refetch: fetchSavedListings,
   };
