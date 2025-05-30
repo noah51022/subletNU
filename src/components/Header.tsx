@@ -2,7 +2,7 @@ import { ReactNode, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Drawer, DrawerContent, DrawerHeader } from "@/components/ui/drawer";
-import { Menu as MenuIcon, Home, PlusCircle, MessageSquare, User } from "lucide-react";
+import { Menu as MenuIcon, Home, PlusCircle, MessageSquare, User, Heart } from "lucide-react";
 import { useMessage } from "@/contexts/MessageContext";
 
 interface HeaderProps {
@@ -69,6 +69,9 @@ const Header = ({ title, right, left }: HeaderProps) => {
                     )}
                   </div>
                   Messages
+                </button>
+                <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/saved-listings'); }}>
+                  <Heart size={22} /> Saved
                 </button>
                 <button className="flex items-center gap-2 text-left" onClick={() => { setDrawerOpen(false); navigate('/profile'); }}>
                   <User size={22} /> Profile
